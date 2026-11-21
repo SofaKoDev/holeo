@@ -5,6 +5,7 @@ import { renderGame } from './render.js';
 import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk, playBikeBell, playSciFiHonk } from './audio.js';
 
 const BEST_KEY_PREFIX = 'holeo-arcade-best-v1';
+const LEVIS_GAMES_URL = 'https://sofakodev.github.io/levis-games/';
 const $ = (sel) => document.querySelector(sel);
 
 function bestKeyFor(mapId) {
@@ -81,6 +82,7 @@ document.querySelector('#app').innerHTML = `
             <strong>2-Minute Arcade</strong>
             <small id="arcade-best-label">Beat the clock!</small>
           </button>
+          <a id="btn-levis-games" class="btn-ghost" href="${LEVIS_GAMES_URL}">← Back to Levi's Games</a>
         </div>
         <p class="controls-hint">Touch &amp; drag anywhere, drag with mouse, or use WASD / Arrow keys.</p>
       </div>
