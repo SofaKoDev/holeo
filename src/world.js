@@ -1,8 +1,12 @@
 import { PROPS } from './catalog.js';
 
 export const WORLD_HALF = 1400; // 2800 x 2800 town
+export const LANE_OFFSET = 26;
 
-function makeRng(seed = 20261120) {
+const SHIRT_COLORS = ['#e8636b', '#5294d8', '#f2b84b', '#5db57d', '#9b74d6', '#e88b58', '#4fa8a6'];
+const HAIR_COLORS = ['#4a3525', '#7c5132', '#d4a14c', '#2d3340', '#b8563c'];
+
+export function makeRng(seed = 20261120) {
   let s = seed >>> 0;
   return () => {
     s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
@@ -25,16 +29,24 @@ export function createTown(seed = 20261120) {
     return true;
   };
 
-  const add = (type, x, y, angle = 0) => {
+  const add = (type, x, y, angle = 0, extra = {}) => {
     const def = PROPS[type];
     if (!canPlace(x, y, def.radius)) return false;
     props.push({
       id: nextId++,
       type,
       ...def,
+      ...extra,
       x,
       y,
       angle,
+      vx: 0,
+      vy: 0,
+      z: 0,
+      vz: 0,
+      tilt: 0,
+      tiltAngle: 0,
+      spinVel: 0,
       swallowing: false,
       swallowProgress: 0,
       swallowed: false,
@@ -43,15 +55,32 @@ export function createTown(seed = 20261120) {
     return true;
   };
 
+  const makePersonExtra = () => ({
+    color: SHIRT_COLORS[Math.floor(rand() * SHIRT_COLORS.length)],
+    accent: HAIR_COLORS[Math.floor(rand() * HAIR_COLORS.length)],
+    wander: {
+      dir: rand() * Math.PI * 2,
+      speed: 24 + rand() * 18,
+      timer: 1.2 + rand() * 2.8,
+      pauseTimer: rand() < 0.25 ? 0.5 + rand() * 1.2 : 0,
+      walkPhase: rand() * Math.PI * 2,
+    },
+  });
+
   // Road centers: horizontal & vertical avenues dividing the town into cozy blocks
   const roads = [-760, -240, 240, 760];
 
-  // 1. Starter ring of Tiny & Small props right around the central park plaza (0, 0)
+  // 1. Starter ring of Tiny & Small props + park visitors right around the central park plaza (0, 0)
   const starterTiny = ['cone', 'flower', 'hydrant', 'bollard'];
-  for (let i = 0; i < 38; i++) {
-    const a = (i / 38) * Math.PI * 2 + rand() * 0.25;
+  for (let i = 0; i < 34; i++) {
+    const a = (i / 34) * Math.PI * 2 + rand() * 0.25;
     const dist = 58 + rand() * 195;
     add(starterTiny[i % starterTiny.length], Math.cos(a) * dist, Math.sin(a) * dist, rand() * Math.PI * 2);
+  }
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2 + rand() * 0.4;
+    const dist = 68 + rand() * 145;
+    add('person', Math.cos(a) * dist, Math.sin(a) * dist, rand() * Math.PI * 2, makePersonExtra());
   }
   const starterSmall = ['trashcan', 'mailbox', 'bench', 'lamp'];
   for (let i = 0; i < 24; i++) {
@@ -60,23 +89,51 @@ export function createTown(seed = 20261120) {
     add(starterSmall[i % starterSmall.length], Math.cos(a) * dist, Math.sin(a) * dist, a + Math.PI / 2);
   }
 
-  // 2. Cars, trucks & buses neatly aligned along the paved avenues
+  // 2. Cars, trucks & buses neatly aligned along the paved avenues (moving along road grid)
   const cars = ['carRed', 'carBlue', 'carYellow'];
   const bigVehicles = ['truck', 'bus'];
   for (const roadY of roads) {
-    for (let x = -1220; x <= 1220; x += 135) {
+    for (let x = -1200; x <= 1200; x += 175) {
       if (roads.some((rx) => Math.abs(x - rx) < 110)) continue;
-      const lane = rand() < 0.5 ? -26 : 26;
-      const pick = rand() < 0.72 ? cars[Math.floor(rand() * cars.length)] : bigVehicles[Math.floor(rand() * bigVehicles.length)];
-      add(pick, x + (rand() - 0.5) * 35, roadY + lane, lane > 0 ? 0 : Math.PI);
+      const lane = rand() < 0.5 ? -LANE_OFFSET : LANE_OFFSET;
+      const dir = lane > 0 ? 1 : -1;
+      const isBig = rand() >= 0.72;
+      const pick = isBig ? bigVehicles[Math.floor(rand() * bigVehicles.length)] : cars[Math.floor(rand() * cars.length)];
+      const angle = dir > 0 ? 0 : Math.PI;
+      const speed = isBig ? 42 + rand() * 20 : 58 + rand() * 32;
+      add(pick, x + (rand() - 0.5) * 30, roadY + lane, angle, {
+        road: {
+          axis: 'x',
+          roadCoord: roadY,
+          laneOffset: lane,
+          dir,
+          speed,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
     }
   }
   for (const roadX of roads) {
-    for (let y = -1220; y <= 1220; y += 145) {
+    for (let y = -1200; y <= 1200; y += 185) {
       if (roads.some((ry) => Math.abs(y - ry) < 110)) continue;
-      const lane = rand() < 0.5 ? -26 : 26;
-      const pick = rand() < 0.72 ? cars[Math.floor(rand() * cars.length)] : bigVehicles[Math.floor(rand() * bigVehicles.length)];
-      add(pick, roadX + lane, y + (rand() - 0.5) * 35, lane > 0 ? Math.PI / 2 : -Math.PI / 2);
+      const lane = rand() < 0.5 ? -LANE_OFFSET : LANE_OFFSET;
+      const dir = lane > 0 ? 1 : -1;
+      const isBig = rand() >= 0.72;
+      const pick = isBig ? bigVehicles[Math.floor(rand() * bigVehicles.length)] : cars[Math.floor(rand() * cars.length)];
+      const angle = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      const speed = isBig ? 42 + rand() * 20 : 58 + rand() * 32;
+      add(pick, roadX + lane, y + (rand() - 0.5) * 30, angle, {
+        road: {
+          axis: 'y',
+          roadCoord: roadX,
+          laneOffset: lane,
+          dir,
+          speed,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
     }
   }
 
@@ -124,6 +181,7 @@ export function createTown(seed = 20261120) {
     ['cone', 30],
     ['flower', 36],
     ['hydrant', 24],
+    ['person', 36],
   ];
   for (const [type, count] of scatter) {
     let placed = 0;
@@ -132,9 +190,10 @@ export function createTown(seed = 20261120) {
       attempts++;
       const x = (rand() * 2 - 1) * (WORLD_HALF - 90);
       const y = (rand() * 2 - 1) * (WORLD_HALF - 90);
-      // Avoid putting trees/bushes/benches directly in the middle of roads
+      // Avoid putting trees/bushes/benches/people directly in the middle of roads
       if (roads.some((r) => Math.abs(x - r) < 62 || Math.abs(y - r) < 62)) continue;
-      if (add(type, x, y, rand() * Math.PI * 2)) placed++;
+      const extra = type === 'person' ? makePersonExtra() : {};
+      if (add(type, x, y, rand() * Math.PI * 2, extra)) placed++;
     }
   }
 

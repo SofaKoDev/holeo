@@ -59,4 +59,55 @@ describe('Holeo engine', () => {
     expect(game.phase).toBe('finished');
     expect(game.finishedReason).toBe('time');
   });
+
+  it('moves vehicles along the road network and keeps them on street paths', () => {
+    const game = createGame({ mode: 'sandbox', seed: 42 });
+    startGame(game);
+    const vehicles = game.town.props.filter((p) => p.motion === 'road');
+    expect(vehicles.length).toBeGreaterThan(10);
+
+    const startPositions = vehicles.map((v) => ({ x: v.x, y: v.y }));
+    for (let i = 0; i < 120; i++) stepGame(game, 0.04, 0, 0);
+
+    let movedCount = 0;
+    for (let i = 0; i < vehicles.length; i++) {
+      const v = vehicles[i];
+      if (Math.hypot(v.x - startPositions[i].x, v.y - startPositions[i].y) > 5) movedCount++;
+      // Every active vehicle must stay within road width (<= 46px from a horizontal or vertical road center)
+      const onRoad = game.town.roads.some((r) => Math.abs(v.x - r) <= 46 || Math.abs(v.y - r) <= 46);
+      expect(onRoad).toBe(true);
+    }
+    expect(movedCount).toBeGreaterThan(vehicles.length * 0.7);
+  });
+
+  it('wanders townspeople around the map over time', () => {
+    const game = createGame({ mode: 'sandbox', seed: 42 });
+    startGame(game);
+    const people = game.town.props.filter((p) => p.shape === 'person');
+    expect(people.length).toBeGreaterThan(20);
+
+    const startPositions = people.map((p) => ({ x: p.x, y: p.y }));
+    for (let i = 0; i < 80; i++) stepGame(game, 0.04, 0, 0);
+
+    const moved = people.filter((p, i) => Math.hypot(p.x - startPositions[i].x, p.y - startPositions[i].y) > 4);
+    expect(moved.length).toBeGreaterThan(people.length * 0.6);
+  });
+
+  it('applies gravity drop and tipping physics to props falling into the hole', () => {
+    const game = createGame({ mode: 'sandbox', seed: 42 });
+    startGame(game);
+    const tiny = game.town.props.find((p) => p.tier === 1 && p.shape === 'cone');
+    game.hole.x = tiny.x;
+    game.hole.y = tiny.y;
+
+    stepGame(game, 0.04, 0, 0);
+    expect(tiny.swallowing).toBe(true);
+    const vz1 = tiny.vz;
+    const z1 = tiny.z;
+
+    stepGame(game, 0.04, 0, 0);
+    expect(tiny.vz).toBeLessThan(vz1); // accelerating downward under gravity
+    expect(tiny.z).toBeLessThan(z1);
+    expect(tiny.tilt).toBeGreaterThan(0);
+  });
 });

@@ -110,27 +110,82 @@ function drawHole(ctx, hole, elapsed) {
 }
 
 function drawProp(ctx, p) {
-  const s = p.swallowing ? Math.max(0.05, 1 - p.swallowProgress * 0.92) : 1;
-  const sinkY = p.swallowing ? p.swallowProgress * 18 : 0;
+  const depth = p.swallowing ? p.swallowProgress : 0;
+  // Perspective shrink as it falls deeper into the pit (driven by actual z gravity drop)
+  const s = p.swallowing ? Math.max(0.28, 1 - depth * 0.62) : 1;
+  const sinkY = p.swallowing ? -p.z * 0.68 : 0;
   const wobble = p.bump > 0 ? Math.sin(p.bump * 18) * 0.14 : 0;
   const r = p.radius;
   const h = p.height * 0.55;
 
   ctx.save();
   ctx.translate(p.x, p.y + sinkY);
+
+  // Directional lean/tipping toward the hole rim (both pre-fall and while tumbling in)
+  if (p.tilt > 0.01) {
+    const lean = Math.min(1.25, p.tilt);
+    const leanX = Math.cos(p.tiltAngle) * lean * 0.36;
+    const leanY = Math.sin(p.tiltAngle) * lean * 0.18;
+    ctx.transform(1, leanY, leanX, Math.max(0.45, 1 - lean * 0.32), 0, 0);
+  }
+
   ctx.scale(s, s);
-  if (p.swallowing) ctx.globalAlpha = Math.max(0, 1 - p.swallowProgress * 0.85);
+  if (p.swallowing) {
+    // Tumble rotation for non-oriented props (cars/benches/people already use p.angle inside)
+    if (p.shape !== 'car' && p.shape !== 'truck' && p.shape !== 'bus' && p.shape !== 'bench' && p.shape !== 'person') {
+      ctx.rotate(p.angle * 0.55);
+    }
+    ctx.globalAlpha = Math.max(0, 1 - Math.pow(depth, 1.8) * 0.92);
+  }
   if (wobble) ctx.rotate(wobble);
 
-  // Soft cast ground shadow
+  // Soft cast ground shadow (fades out as prop tips over the rim)
   if (!p.swallowing) {
-    ctx.fillStyle = 'rgba(44, 58, 48, 0.22)';
+    ctx.fillStyle = `rgba(44, 58, 48, ${(0.22 * Math.max(0, 1 - p.tilt * 1.4)).toFixed(3)})`;
     ctx.beginPath();
     ctx.ellipse(r * 0.14, r * 0.22, r * 1.04, r * 0.78, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
   switch (p.shape) {
+    case 'person': {
+      const phase = p.wander ? p.wander.walkPhase : 0;
+      const moving = p.wander && (Math.abs(p.vx) > 2 || Math.abs(p.vy) > 2);
+      const bob = moving && !p.swallowing ? Math.abs(Math.sin(phase)) * 3.2 : 0;
+      const stride = moving && !p.swallowing ? Math.sin(phase) * 3.8 : 0;
+
+      ctx.save();
+      if (p.swallowing) ctx.rotate(p.angle);
+      // Tiny stepping shoes
+      ctx.fillStyle = '#333d4b';
+      ctx.beginPath();
+      ctx.arc(-3.5, 4 + stride * 0.6, 2.8, 0, Math.PI * 2);
+      ctx.arc(3.5, 4 - stride * 0.6, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+      // Cozy shirt torso
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-6.5, -8 - bob, 13, 13, 5);
+      ctx.fill();
+      // Arms swinging slightly
+      ctx.fillStyle = '#ffd9ba';
+      ctx.beginPath();
+      ctx.arc(-7.2, -1 - bob - stride * 0.4, 2.3, 0, Math.PI * 2);
+      ctx.arc(7.2, -1 - bob + stride * 0.4, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+      // Head
+      ctx.fillStyle = '#ffd9ba';
+      ctx.beginPath();
+      ctx.arc(0, -12.5 - bob, 5.6, 0, Math.PI * 2);
+      ctx.fill();
+      // Hair / cap
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(0, -14 - bob, 5.4, Math.PI, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
     case 'cone': {
       ctx.fillStyle = p.color;
       ctx.beginPath();
@@ -454,19 +509,33 @@ export function renderGame(ctx, state, width, height, pointerGuide = null) {
   drawTownGround(ctx, state.town);
   drawHole(ctx, state.hole, state.elapsed);
 
-  // Frustum cull & sort props by y so 2.5D overlap feels right
+  // Frustum cull & split into falling (clipped inside hole pit) vs standing props
   const viewHalfW = (width / 2) / cam.zoom + 240;
   const viewHalfH = (height / 2) / cam.zoom + 280;
-  const visible = state.town.props
-    .filter(
-      (p) =>
-        !p.swallowed &&
-        Math.abs(p.x - cam.x) < viewHalfW &&
-        Math.abs(p.y - cam.y) < viewHalfH,
-    )
-    .sort((a, b) => a.y - b.y);
+  const falling = [];
+  const standing = [];
+  for (const p of state.town.props) {
+    if (p.swallowed) continue;
+    if (Math.abs(p.x - cam.x) >= viewHalfW || Math.abs(p.y - cam.y) >= viewHalfH) continue;
+    if (p.swallowing) falling.push(p);
+    else standing.push(p);
+  }
 
-  for (const p of visible) {
+  // Draw falling props clipped to the hole opening so they genuinely drop below the rim!
+  if (falling.length > 0) {
+    falling.sort((a, b) => a.z - b.z); // deeper items behind shallower ones
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(state.hole.x, state.hole.y, state.hole.radius, 0, Math.PI * 2);
+    ctx.clip();
+    for (const p of falling) {
+      drawProp(ctx, p);
+    }
+    ctx.restore();
+  }
+
+  standing.sort((a, b) => a.y - b.y);
+  for (const p of standing) {
     drawProp(ctx, p);
   }
 

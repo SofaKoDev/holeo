@@ -14,6 +14,7 @@ export const PROPS = {
   flower: { name: 'Flower Pot', tier: 1, radius: 11, height: 12, mass: 13, points: 10, shape: 'flower', color: '#d47c54', accent: '#f58ca8' },
   hydrant: { name: 'Fire Hydrant', tier: 1, radius: 12, height: 16, mass: 16, points: 15, shape: 'hydrant', color: '#e65564', accent: '#ffd269' },
   bollard: { name: 'Sidewalk Post', tier: 1, radius: 11, height: 15, mass: 14, points: 12, shape: 'cylinder', color: '#7a8ea3', accent: '#ffe184' },
+  person: { name: 'Townsperson', tier: 1, radius: 12, height: 22, mass: 16, points: 18, shape: 'person', color: '#5c8fd6', accent: '#f2c14e', motion: 'wander' },
 
   // Tier 2: Small (radius 18-26)
   trashcan: { name: 'Trash Can', tier: 2, radius: 19, height: 22, mass: 34, points: 25, shape: 'cylinder', color: '#589e8c', accent: '#3d7567' },
@@ -23,15 +24,15 @@ export const PROPS = {
 
   // Tier 3: Medium (radius 30-42)
   bush: { name: 'Round Bush', tier: 3, radius: 30, height: 22, mass: 85, points: 50, shape: 'bush', color: '#5cb370', accent: '#80d48f' },
-  carRed: { name: 'Red Car', tier: 3, radius: 36, height: 24, mass: 145, points: 80, shape: 'car', color: '#ea5c6a', accent: '#d8f1ff' },
-  carBlue: { name: 'Blue Car', tier: 3, radius: 36, height: 24, mass: 145, points: 80, shape: 'car', color: '#5595d9', accent: '#d8f1ff' },
-  carYellow: { name: 'Taxi Cab', tier: 3, radius: 37, height: 24, mass: 150, points: 85, shape: 'car', color: '#f5c249', accent: '#d8f1ff' },
+  carRed: { name: 'Red Car', tier: 3, radius: 36, height: 24, mass: 145, points: 80, shape: 'car', color: '#ea5c6a', accent: '#d8f1ff', motion: 'road' },
+  carBlue: { name: 'Blue Car', tier: 3, radius: 36, height: 24, mass: 145, points: 80, shape: 'car', color: '#5595d9', accent: '#d8f1ff', motion: 'road' },
+  carYellow: { name: 'Taxi Cab', tier: 3, radius: 37, height: 24, mass: 150, points: 85, shape: 'car', color: '#f5c249', accent: '#d8f1ff', motion: 'road' },
 
   // Tier 4: Large (radius 48-64)
   pine: { name: 'Pine Tree', tier: 4, radius: 48, height: 64, mass: 260, points: 120, shape: 'pine', color: '#3f8c6e', accent: '#5db38e' },
   oak: { name: 'Oak Tree', tier: 4, radius: 52, height: 56, mass: 290, points: 130, shape: 'oak', color: '#56a863', accent: '#7bc977' },
-  truck: { name: 'Delivery Truck', tier: 4, radius: 54, height: 34, mass: 340, points: 160, shape: 'truck', color: '#fff8ec', accent: '#5ca89a' },
-  bus: { name: 'School Bus', tier: 4, radius: 60, height: 34, mass: 410, points: 190, shape: 'bus', color: '#f7bc3b', accent: '#3d5061' },
+  truck: { name: 'Delivery Truck', tier: 4, radius: 54, height: 34, mass: 340, points: 160, shape: 'truck', color: '#fff8ec', accent: '#5ca89a', motion: 'road' },
+  bus: { name: 'School Bus', tier: 4, radius: 60, height: 34, mass: 410, points: 190, shape: 'bus', color: '#f7bc3b', accent: '#3d5061', motion: 'road' },
 
   // Tier 5: Huge (radius 74-96)
   cottage: { name: 'Cozy Cottage', tier: 5, radius: 76, height: 62, mass: 760, points: 320, shape: 'house', color: '#fff4df', accent: '#e06c65' },
