@@ -1,0 +1,313 @@
+import './styles.css';
+import { TIERS, tierForRadius, tierProgressForRadius } from './catalog.js';
+import { createGame, startGame, togglePause, stepGame } from './engine.js';
+import { renderGame } from './render.js';
+import { playSwallow, playLevelUp } from './audio.js';
+
+const BEST_KEY = 'holeo-arcade-best-v1';
+const $ = (sel) => document.querySelector(sel);
+
+function readBest() {
+  try {
+    const val = Number(localStorage.getItem(BEST_KEY));
+    return Number.isFinite(val) && val > 0 ? val : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeBest(score) {
+  try {
+    localStorage.setItem(BEST_KEY, String(score));
+  } catch {
+    // Ignore storage failures
+  }
+}
+
+document.querySelector('#app').innerHTML = `
+  <main class="holeo-app">
+    <canvas id="game-canvas" aria-label="Holeo town map"></canvas>
+
+    <header class="hud" id="hud" hidden>
+      <div class="hud-pill hud-pill-tier">
+        <small>SIZE</small>
+        <strong id="hud-tier">Lv.1 · Tiny</strong>
+        <div class="tier-progress" aria-hidden="true"><span id="hud-tier-bar"></span></div>
+      </div>
+      <div class="hud-pill">
+        <small id="hud-mid-label">TOWN</small>
+        <strong id="hud-mid-val">0%</strong>
+      </div>
+      <div class="hud-pill">
+        <small>SCORE</small>
+        <strong id="hud-score">0</strong>
+      </div>
+      <div class="hud-actions">
+        <button id="btn-sound" type="button" aria-pressed="true" aria-label="Toggle sound">🔊</button>
+        <button id="btn-pause" type="button" aria-label="Pause">⏸</button>
+      </div>
+    </header>
+
+    <div id="milestone-banner" class="milestone-banner" role="status" hidden></div>
+
+    <section id="overlay-start" class="overlay">
+      <div class="card">
+        <div class="logo-hole" aria-hidden="true"><span></span></div>
+        <p class="kicker">SWALLOW THE WHOLE TOWN</p>
+        <h1>Holeo</h1>
+        <p class="subtitle">Start small with traffic cones &amp; flowers, then grow huge enough to gulp cars, trees, houses, and skyscrapers!</p>
+        <div class="mode-buttons">
+          <button id="play-sandbox" class="btn-primary" type="button">
+            <strong>Relaxed Sandbox</strong>
+            <small>No timer · Swallow 100% of the town</small>
+          </button>
+          <button id="play-arcade" class="btn-secondary" type="button">
+            <strong>2-Minute Arcade</strong>
+            <small id="arcade-best-label">Beat the clock!</small>
+          </button>
+        </div>
+        <p class="controls-hint">Touch &amp; drag anywhere, drag with mouse, or use WASD / Arrow keys.</p>
+      </div>
+    </section>
+
+    <section id="overlay-pause" class="overlay" hidden>
+      <div class="card compact">
+        <h2>Paused</h2>
+        <p class="subtitle">Take a breather — the town isn't going anywhere!</p>
+        <div class="stack-buttons">
+          <button id="btn-resume" class="btn-primary" type="button">Keep Playing</button>
+          <button id="btn-restart-pause" class="btn-secondary" type="button">Restart Town</button>
+          <button id="btn-menu-pause" class="btn-ghost" type="button">Main Menu</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="overlay-finish" class="overlay" hidden>
+      <div class="card compact">
+        <p class="kicker" id="finish-kicker">ROUND COMPLETE</p>
+        <h2 id="finish-title">Town Swallowed!</h2>
+        <strong id="finish-score" class="big-score">0</strong>
+        <p id="finish-summary" class="subtitle"></p>
+        <div class="stack-buttons">
+          <button id="btn-play-again" class="btn-primary" type="button">Play Again</button>
+          <button id="btn-menu-finish" class="btn-secondary" type="button">Main Menu</button>
+        </div>
+      </div>
+    </section>
+  </main>
+`;
+
+const canvas = $('#game-canvas');
+const ctx = canvas.getContext('2d');
+
+let state = createGame({ mode: 'sandbox' });
+let soundEnabled = true;
+let width = window.innerWidth;
+let height = window.innerHeight;
+let lastTime = 0;
+let rafId = 0;
+
+// Keyboard state
+const keys = new Set();
+window.addEventListener('keydown', (e) => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) {
+    keys.add(e.key.toLowerCase());
+  }
+  if (e.key === 'Escape' && (state.phase === 'playing' || state.phase === 'paused')) {
+    togglePause(state);
+    syncUi();
+  }
+});
+window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+window.addEventListener('blur', () => {
+  keys.clear();
+  pointer.active = false;
+  if (state.phase === 'playing') {
+    togglePause(state);
+    syncUi();
+  }
+});
+
+// Touch / mouse drag joystick
+const pointer = { active: false, id: null, originX: 0, originY: 0, knobX: 0, knobY: 0, dx: 0, dy: 0 };
+const MAX_DRAG = 52;
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (state.phase !== 'playing') return;
+  pointer.active = true;
+  pointer.id = e.pointerId;
+  pointer.originX = e.clientX;
+  pointer.originY = e.clientY;
+  pointer.knobX = e.clientX;
+  pointer.knobY = e.clientY;
+  pointer.dx = 0;
+  pointer.dy = 0;
+  canvas.setPointerCapture(e.pointerId);
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointer.active || e.pointerId !== pointer.id) return;
+  const rx = e.clientX - pointer.originX;
+  const ry = e.clientY - pointer.originY;
+  const dist = Math.hypot(rx, ry);
+  const clamped = Math.min(dist, MAX_DRAG);
+  const angle = Math.atan2(ry, rx);
+  pointer.knobX = pointer.originX + Math.cos(angle) * clamped;
+  pointer.knobY = pointer.originY + Math.sin(angle) * clamped;
+  pointer.dx = dist > 4 ? (Math.cos(angle) * clamped) / MAX_DRAG : 0;
+  pointer.dy = dist > 4 ? (Math.sin(angle) * clamped) / MAX_DRAG : 0;
+});
+
+function releasePointer(e) {
+  if (e.pointerId !== pointer.id) return;
+  pointer.active = false;
+  pointer.dx = 0;
+  pointer.dy = 0;
+}
+canvas.addEventListener('pointerup', releasePointer);
+canvas.addEventListener('pointercancel', releasePointer);
+
+function resize() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.round(width * dpr);
+  canvas.height = Math.round(height * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  renderGame(ctx, state, width, height, pointer);
+}
+window.addEventListener('resize', resize);
+
+function getInputVector() {
+  let ix = pointer.active ? pointer.dx : 0;
+  let iy = pointer.active ? pointer.dy : 0;
+  if (keys.has('arrowleft') || keys.has('a')) ix -= 1;
+  if (keys.has('arrowright') || keys.has('d')) ix += 1;
+  if (keys.has('arrowup') || keys.has('w')) iy -= 1;
+  if (keys.has('arrowdown') || keys.has('s')) iy += 1;
+  return [ix, iy];
+}
+
+function formatTime(sec) {
+  const s = Math.ceil(sec);
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return `${m}:${String(rem).padStart(2, '0')}`;
+}
+
+function syncUi() {
+  const best = readBest();
+  $('#arcade-best-label').textContent = best ? `Best score: ${best.toLocaleString()}` : '2 minutes · High score chase';
+
+  $('#hud').hidden = state.phase === 'ready';
+  $('#overlay-start').hidden = state.phase !== 'ready';
+  $('#overlay-pause').hidden = state.phase !== 'paused';
+  $('#overlay-finish').hidden = state.phase !== 'finished';
+
+  const tier = tierForRadius(state.hole.radius);
+  $('#hud-tier').textContent = `Lv.${tier.level}/${TIERS.length} · ${tier.label}`;
+  const pctNext = Math.round(tierProgressForRadius(state.hole.radius) * 100);
+  $('#hud-tier-bar').style.width = `${pctNext}%`;
+  $('#hud-score').textContent = state.score.toLocaleString();
+
+  if (state.mode === 'arcade') {
+    $('#hud-mid-label').textContent = 'TIME';
+    $('#hud-mid-val').textContent = formatTime(state.timeLeft);
+  } else {
+    const pct = Math.min(100, Math.round((state.swallowedCount / state.totalProps) * 100));
+    $('#hud-mid-label').textContent = 'TOWN';
+    $('#hud-mid-val').textContent = `${pct}%`;
+  }
+
+  if (state.banner) {
+    $('#milestone-banner').hidden = false;
+    $('#milestone-banner').textContent = state.banner.text;
+  } else {
+    $('#milestone-banner').hidden = true;
+  }
+
+  if (state.phase === 'finished') {
+    let newBest = false;
+    if (state.mode === 'arcade' && state.score > readBest()) {
+      writeBest(state.score);
+      newBest = true;
+    }
+    const pct = Math.round((state.swallowedCount / state.totalProps) * 100);
+    $('#finish-kicker').textContent = newBest ? 'NEW HIGH SCORE!' : state.finishedReason === 'cleared' ? '100% CLEARED!' : 'TIME IS UP!';
+    $('#finish-title').textContent = state.finishedReason === 'cleared' ? 'You Swallowed the Whole Town!' : 'What a Giant Hole!';
+    $('#finish-score').textContent = state.score.toLocaleString();
+    $('#finish-summary').textContent = `Swallowed ${state.swallowedCount} of ${state.totalProps} items (${pct}%) · Reached Lv.${tier.level} (${tier.label})`;
+  }
+}
+
+function scheduleLoop() {
+  if (!rafId) rafId = requestAnimationFrame(loop);
+}
+
+function stopLoop() {
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+  lastTime = 0;
+}
+
+function loop(now) {
+  rafId = 0;
+  const dt = lastTime ? (now - lastTime) / 1000 : 0.016;
+  lastTime = now;
+
+  if (state.phase === 'playing') {
+    const [ix, iy] = getInputVector();
+    const { swallowed, leveledUp } = stepGame(state, dt, ix, iy);
+    if (swallowed.length) playSwallow(swallowed[swallowed.length - 1].tier, soundEnabled);
+    if (leveledUp) playLevelUp(soundEnabled);
+    syncUi();
+  }
+
+  renderGame(ctx, state, width, height, pointer);
+
+  if (state.phase === 'playing') {
+    scheduleLoop();
+  } else {
+    lastTime = 0;
+  }
+}
+
+function begin(mode) {
+  state = createGame({ mode, seed: Math.floor(Math.random() * 1_000_000) });
+  startGame(state);
+  pointer.active = false;
+  syncUi();
+  scheduleLoop();
+}
+
+$('#play-sandbox').onclick = () => begin('sandbox');
+$('#play-arcade').onclick = () => begin('arcade');
+$('#btn-pause').onclick = () => {
+  togglePause(state);
+  syncUi();
+  if (state.phase === 'playing') scheduleLoop();
+  else stopLoop();
+};
+$('#btn-resume').onclick = () => {
+  if (state.phase === 'paused') togglePause(state);
+  syncUi();
+  scheduleLoop();
+};
+$('#btn-restart-pause').onclick = () => begin(state.mode);
+$('#btn-play-again').onclick = () => begin(state.mode);
+$('#btn-menu-pause').onclick = $('#btn-menu-finish').onclick = () => {
+  stopLoop();
+  state = createGame({ mode: state.mode });
+  syncUi();
+  renderGame(ctx, state, width, height, pointer);
+};
+$('#btn-sound').onclick = () => {
+  soundEnabled = !soundEnabled;
+  $('#btn-sound').textContent = soundEnabled ? '🔊' : '🔇';
+  $('#btn-sound').setAttribute('aria-pressed', String(soundEnabled));
+};
+
+resize();
+syncUi();
