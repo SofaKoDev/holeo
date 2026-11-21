@@ -32,11 +32,12 @@ export function cameraZoomForRadius(radius) {
   return 1.35 / (1 + t * 3.4);
 }
 
-export function createGame({ mode = 'sandbox', seed = 20261120 } = {}) {
-  const town = createTown(seed);
+export function createGame({ mode = 'sandbox', mapId = 'town', seed = 20261120 } = {}) {
+  const town = createTown(seed, mapId);
   const startMass = massFromRadius(START_RADIUS);
   return {
     mode,
+    mapId,
     phase: 'ready', // 'ready' | 'playing' | 'paused' | 'finished'
     town,
     rand: makeRng((seed ^ 0x9e3779b9) >>> 0),
@@ -80,11 +81,19 @@ function updateRoadVehicle(prop, state, dt) {
   if (!r) return;
   const { roads, halfSize, props } = state.town;
 
-  // Check if another active vehicle is directly ahead in the same lane
+  // Check if another active vehicle/cyclist is directly ahead in the same lane
+  const laneWidth = r.laneWidth || LANE_OFFSET;
   let blocked = false;
   for (const other of props) {
     if (other === prop || other.swallowed || other.swallowing || !other.road) continue;
-    if (other.road.axis !== r.axis || other.road.roadCoord !== r.roadCoord || other.road.dir !== r.dir) continue;
+    if (
+      other.road.axis !== r.axis ||
+      other.road.roadCoord !== r.roadCoord ||
+      other.road.dir !== r.dir ||
+      Math.abs(other.road.laneOffset - r.laneOffset) > 10
+    ) {
+      continue;
+    }
     const ahead = r.axis === 'x' ? (other.x - prop.x) * r.dir : (other.y - prop.y) * r.dir;
     const minGap = prop.radius + other.radius + 32;
     if (ahead > 0 && ahead < minGap) {
@@ -95,6 +104,9 @@ function updateRoadVehicle(prop, state, dt) {
 
   const moveSpeed = blocked ? 0 : r.speed;
   const laneSpring = 1 - Math.exp(-8 * dt);
+  if (prop.shape === 'cyclist' && moveSpeed > 0) {
+    prop.pedalPhase = (prop.pedalPhase || 0) + moveSpeed * dt * 0.24;
+  }
 
   if (r.axis === 'x') {
     const prevX = prop.x;
@@ -115,19 +127,19 @@ function updateRoadVehicle(prop, state, dt) {
           r.axis = 'y';
           r.roadCoord = crossX;
           r.dir = newDir;
-          r.laneOffset = newDir > 0 ? LANE_OFFSET : -LANE_OFFSET;
+          r.laneOffset = newDir > 0 ? laneWidth : -laneWidth;
           r.targetAngle = headingForRoad('y', newDir);
           break;
         }
       }
     }
 
-    // Smooth U-turn at town borders so cars always stay on the road network
+    // Smooth U-turn at town borders so cars & cyclists always stay on the road network
     const edge = halfSize - 85;
     if ((r.dir > 0 && prop.x > edge) || (r.dir < 0 && prop.x < -edge)) {
       prop.x = Math.max(-edge, Math.min(edge, prop.x));
       r.dir = -r.dir;
-      r.laneOffset = r.dir > 0 ? LANE_OFFSET : -LANE_OFFSET;
+      r.laneOffset = r.dir > 0 ? laneWidth : -laneWidth;
       r.lastIntersection = null;
       r.targetAngle = headingForRoad('x', r.dir);
     }
@@ -149,7 +161,7 @@ function updateRoadVehicle(prop, state, dt) {
           r.axis = 'x';
           r.roadCoord = crossY;
           r.dir = newDir;
-          r.laneOffset = newDir > 0 ? LANE_OFFSET : -LANE_OFFSET;
+          r.laneOffset = newDir > 0 ? laneWidth : -laneWidth;
           r.targetAngle = headingForRoad('x', newDir);
           break;
         }
@@ -160,7 +172,7 @@ function updateRoadVehicle(prop, state, dt) {
     if ((r.dir > 0 && prop.y > edge) || (r.dir < 0 && prop.y < -edge)) {
       prop.y = Math.max(-edge, Math.min(edge, prop.y));
       r.dir = -r.dir;
-      r.laneOffset = r.dir > 0 ? LANE_OFFSET : -LANE_OFFSET;
+      r.laneOffset = r.dir > 0 ? laneWidth : -laneWidth;
       r.lastIntersection = null;
       r.targetAngle = headingForRoad('y', r.dir);
     }

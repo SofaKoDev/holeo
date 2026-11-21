@@ -215,6 +215,58 @@ body,
   margin: 4px 0 8px;
 }
 
+.map-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.card .map-chip {
+  min-height: 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 2px solid rgba(40, 62, 58, 0.12);
+  background: rgba(244, 241, 232, 0.9);
+  color: #213238;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  box-shadow: 0 3px 0 rgba(40, 62, 58, 0.1);
+}
+
+.card .map-chip.active {
+  border-color: #3a9c73;
+  background: #edf9f2;
+  box-shadow: 0 3px 0 rgba(58, 156, 115, 0.25), 0 0 0 3px rgba(58, 156, 115, 0.14);
+}
+
+.map-badge {
+  font-size: 24px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.map-copy {
+  min-width: 0;
+}
+
+.map-copy strong {
+  display: block;
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.map-copy small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5b6d68;
+  line-height: 1.25;
+}
+
 .mode-buttons,
 .stack-buttons {
   display: flex;

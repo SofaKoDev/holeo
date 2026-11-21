@@ -1,74 +1,130 @@
 function drawTownGround(ctx, town) {
   const half = town.halfSize;
+  const isMetro = town.mapId === 'metro';
 
-  // Cozy sunlit grass base
-  ctx.fillStyle = '#c5e2b5';
+  // Base terrain: sunlit grass for Cozy Town, urban concrete blocks for Metro City
+  ctx.fillStyle = isMetro ? '#cfd5dc' : '#c5e2b5';
   ctx.fillRect(-half, -half, half * 2, half * 2);
 
-  // Outer town border meadow
-  ctx.strokeStyle = '#9ec78e';
+  // Outer town border
+  ctx.strokeStyle = isMetro ? '#8f9aa8' : '#9ec78e';
   ctx.lineWidth = 28;
   ctx.strokeRect(-half, -half, half * 2, half * 2);
 
-  // Cozy central park plaza at (0, 0)
-  ctx.fillStyle = '#f2e6cf';
-  ctx.beginPath();
-  ctx.roundRect(-195, -195, 390, 390, 44);
-  ctx.fill();
-  ctx.fillStyle = '#b4dca4';
-  ctx.beginPath();
-  ctx.roundRect(-170, -170, 340, 340, 34);
-  ctx.fill();
-  // Cross park paths
-  ctx.fillStyle = '#f5ebd8';
-  ctx.fillRect(-195, -26, 390, 52);
-  ctx.fillRect(-26, -195, 52, 390);
-  ctx.beginPath();
-  ctx.arc(0, 0, 54, 0, Math.PI * 2);
-  ctx.fill();
+  if (isMetro) {
+    // Central Park green oasis in the heart of Metro City
+    ctx.fillStyle = '#e5e0d4';
+    ctx.beginPath();
+    ctx.roundRect(-245, -245, 490, 490, 36);
+    ctx.fill();
+    ctx.fillStyle = '#a5d495';
+    ctx.beginPath();
+    ctx.roundRect(-220, -220, 440, 440, 28);
+    ctx.fill();
+    // Little Central Park pond
+    ctx.fillStyle = '#7ec4e8';
+    ctx.beginPath();
+    ctx.ellipse(-95, -90, 56, 38, -0.25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.beginPath();
+    ctx.ellipse(-108, -98, 22, 11, -0.25, 0, Math.PI * 2);
+    ctx.fill();
+    // Park walking paths
+    ctx.fillStyle = '#efe8d8';
+    ctx.fillRect(-245, -26, 490, 52);
+    ctx.fillRect(-26, -245, 52, 490);
+    ctx.beginPath();
+    ctx.arc(0, 0, 58, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // Cozy central park plaza at (0, 0)
+    ctx.fillStyle = '#f2e6cf';
+    ctx.beginPath();
+    ctx.roundRect(-195, -195, 390, 390, 44);
+    ctx.fill();
+    ctx.fillStyle = '#b4dca4';
+    ctx.beginPath();
+    ctx.roundRect(-170, -170, 340, 340, 34);
+    ctx.fill();
+    // Cross park paths
+    ctx.fillStyle = '#f5ebd8';
+    ctx.fillRect(-195, -26, 390, 52);
+    ctx.fillRect(-26, -195, 52, 390);
+    ctx.beginPath();
+    ctx.arc(0, 0, 54, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   // Paved sidewalks & avenues
-  const roadW = 104;
-  const sideW = 132;
-  ctx.fillStyle = '#eee3ce';
+  const roadW = isMetro ? 116 : 104;
+  const sideW = isMetro ? 148 : 132;
+  ctx.fillStyle = isMetro ? '#e3e6ea' : '#eee3ce';
   for (const r of town.roads) {
     ctx.fillRect(-half, r - sideW / 2, half * 2, sideW);
     ctx.fillRect(r - sideW / 2, -half, sideW, half * 2);
   }
-  ctx.fillStyle = '#626f82';
+  ctx.fillStyle = isMetro ? '#4a5566' : '#626f82';
   for (const r of town.roads) {
     ctx.fillRect(-half, r - roadW / 2, half * 2, roadW);
     ctx.fillRect(r - roadW / 2, -half, roadW, half * 2);
   }
 
-  // Dashed cream lane lines
+  // Painted green bike lanes along outer edges of Metro City avenues
+  if (isMetro) {
+    ctx.fillStyle = 'rgba(72, 180, 118, 0.36)';
+    for (const r of town.roads) {
+      ctx.fillRect(-half, r - 50, half * 2, 14);
+      ctx.fillRect(-half, r + 36, half * 2, 14);
+      ctx.fillRect(r - 50, -half, 14, half * 2);
+      ctx.fillRect(r + 36, -half, 14, half * 2);
+    }
+  }
+
+  // Center lane lines (double yellow for Metro City, dashed cream for Cozy Town)
   ctx.save();
-  ctx.strokeStyle = 'rgba(255, 246, 214, 0.72)';
-  ctx.lineWidth = 4;
-  ctx.setLineDash([22, 20]);
-  for (const r of town.roads) {
-    ctx.beginPath();
-    ctx.moveTo(-half + 30, r);
-    ctx.lineTo(half - 30, r);
-    ctx.moveTo(r, -half + 30);
-    ctx.lineTo(r, half - 30);
-    ctx.stroke();
+  if (isMetro) {
+    ctx.strokeStyle = 'rgba(247, 206, 82, 0.85)';
+    ctx.lineWidth = 3;
+    for (const r of town.roads) {
+      for (const off of [-3, 3]) {
+        ctx.beginPath();
+        ctx.moveTo(-half + 30, r + off);
+        ctx.lineTo(half - 30, r + off);
+        ctx.moveTo(r + off, -half + 30);
+        ctx.lineTo(r + off, half - 30);
+        ctx.stroke();
+      }
+    }
+  } else {
+    ctx.strokeStyle = 'rgba(255, 246, 214, 0.72)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([22, 20]);
+    for (const r of town.roads) {
+      ctx.beginPath();
+      ctx.moveTo(-half + 30, r);
+      ctx.lineTo(half - 30, r);
+      ctx.moveTo(r, -half + 30);
+      ctx.lineTo(r, half - 30);
+      ctx.stroke();
+    }
   }
   ctx.restore();
 
   // Intersections & crosswalk stripes
-  ctx.fillStyle = '#626f82';
+  const roadColor = isMetro ? '#4a5566' : '#626f82';
+  ctx.fillStyle = roadColor;
   for (const rx of town.roads) {
     for (const ry of town.roads) {
       ctx.fillRect(rx - roadW / 2, ry - roadW / 2, roadW, roadW);
       ctx.fillStyle = 'rgba(255, 252, 242, 0.75)';
-      for (let s = -34; s <= 34; s += 17) {
+      for (let s = -38; s <= 38; s += 19) {
         ctx.fillRect(rx + s - 4, ry - roadW / 2 - 14, 8, 12);
         ctx.fillRect(rx + s - 4, ry + roadW / 2 + 2, 8, 12);
         ctx.fillRect(rx - roadW / 2 - 14, ry + s - 4, 12, 8);
         ctx.fillRect(rx + roadW / 2 + 2, ry + s - 4, 12, 8);
       }
-      ctx.fillStyle = '#626f82';
+      ctx.fillStyle = roadColor;
     }
   }
 }
@@ -131,8 +187,15 @@ function drawProp(ctx, p) {
 
   ctx.scale(s, s);
   if (p.swallowing) {
-    // Tumble rotation for non-oriented props (cars/benches/people already use p.angle inside)
-    if (p.shape !== 'car' && p.shape !== 'truck' && p.shape !== 'bus' && p.shape !== 'bench' && p.shape !== 'person') {
+    // Tumble rotation for non-oriented props (cars/cyclists/benches/people already use p.angle inside)
+    if (
+      p.shape !== 'car' &&
+      p.shape !== 'truck' &&
+      p.shape !== 'bus' &&
+      p.shape !== 'cyclist' &&
+      p.shape !== 'bench' &&
+      p.shape !== 'person'
+    ) {
       ctx.rotate(p.angle * 0.55);
     }
     ctx.globalAlpha = Math.max(0, 1 - Math.pow(depth, 1.8) * 0.92);
@@ -485,6 +548,304 @@ function drawProp(ctx, p) {
       }
       break;
     }
+    case 'newsstand': {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.72, -h * 0.95, r * 1.44, h * 0.95 + r * 0.58, 4);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.fillRect(-r * 0.5, -h * 0.75, r, h * 0.45);
+      ctx.fillStyle = '#2d3745';
+      ctx.fillRect(-r * 0.38, -h * 0.62, r * 0.76, 2.5);
+      ctx.fillRect(-r * 0.38, -h * 0.45, r * 0.58, 2.5);
+      break;
+    }
+    case 'subwaySign': {
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, 5);
+      ctx.lineTo(0, -h * 1.05);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(72, 196, 121, 0.3)';
+      ctx.beginPath();
+      ctx.arc(0, -h * 1.08, r * 0.76, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(0, -h * 1.08, r * 0.44, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.48)';
+      ctx.beginPath();
+      ctx.arc(-r * 0.14, -h * 1.16, r * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'hotdogCart': {
+      // Metallic cart base
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.82, -r * 0.48, r * 1.64, r * 0.96, 5);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Classic red-and-yellow striped umbrella canopy
+      const uY = -h * 0.75;
+      const uR = r * 0.92;
+      const slices = 6;
+      for (let i = 0; i < slices; i++) {
+        ctx.fillStyle = i % 2 === 0 ? p.accent : '#ffd152';
+        ctx.beginPath();
+        ctx.moveTo(0, uY);
+        ctx.arc(0, uY, uR, (i / slices) * Math.PI * 2, ((i + 1) / slices) * Math.PI * 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = '#fff5db';
+      ctx.beginPath();
+      ctx.arc(0, uY, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'cyclist': {
+      const pedal = Math.sin(p.pedalPhase || 0) * 3.2;
+      ctx.save();
+      ctx.rotate(p.angle);
+      // Narrow bike tires (front & rear)
+      ctx.fillStyle = '#252e3a';
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.92, -2.5, r * 0.65, 5, 2.5);
+      ctx.roundRect(r * 0.28, -2.5, r * 0.65, 5, 2.5);
+      ctx.fill();
+      // Bike frame & handlebars
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.6, 0);
+      ctx.lineTo(r * 0.52, 0);
+      ctx.moveTo(r * 0.42, -r * 0.45);
+      ctx.lineTo(r * 0.42, r * 0.45);
+      ctx.stroke();
+      // Pedaling feet
+      ctx.fillStyle = '#333d4b';
+      ctx.beginPath();
+      ctx.arc(-2 + pedal, -6.5, 2.4, 0, Math.PI * 2);
+      ctx.arc(-2 - pedal, 6.5, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      // Rider torso & arms reaching handlebars
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-7, -6.5, 13, 13, 5);
+      ctx.fill();
+      ctx.strokeStyle = '#ffd9ba';
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(3, -4.5);
+      ctx.lineTo(r * 0.4, -r * 0.35);
+      ctx.moveTo(3, 4.5);
+      ctx.lineTo(r * 0.4, r * 0.35);
+      ctx.stroke();
+      // Helmeted head
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(2, 0, 5.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(2, 0, 4.6, -Math.PI * 0.7, Math.PI * 0.7);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'brownstone': {
+      const w = r * 1.48;
+      const d = r * 1.24;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -d / 2 - h, w, d + h, 7);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      // Front stoop steps & door
+      ctx.fillStyle = '#9aa2ab';
+      ctx.fillRect(-14, d / 2 - 14, 28, 16);
+      ctx.fillStyle = '#4a3228';
+      ctx.fillRect(-8, d / 2 - 24, 16, 16);
+      // Warm brownstone windows
+      ctx.fillStyle = '#ffeec4';
+      for (let rr = 0; rr < 2; rr++) {
+        for (const cx of [-w * 0.3, 0, w * 0.3]) {
+          if (rr === 1 && cx === 0) continue;
+          ctx.fillRect(cx - 8, -h * 0.25 + rr * 22, 16, 14);
+        }
+      }
+      // Flat cornice roof
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 4, -d / 2 - h - 4, w + 8, d * 0.88, 7);
+      ctx.fill();
+      break;
+    }
+    case 'waterTowerBlock': {
+      const w = r * 1.5;
+      const d = r * 1.36;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -d / 2 - h, w, d + h, 9);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Window grid
+      ctx.fillStyle = '#fff0c7';
+      const cols = 4;
+      const rows = 4;
+      const padX = w * 0.14;
+      const cellW = (w - padX * 2) / cols;
+      const startY = -d / 2 - h + d * 0.92;
+      const rowH = (h + d * 0.12) / (rows + 0.5);
+      for (let rr = 0; rr < rows; rr++) {
+        for (let cc = 0; cc < cols; cc++) {
+          ctx.fillRect(-w / 2 + padX + cc * cellW + 4, startY + rr * rowH, cellW - 8, Math.max(8, rowH * 0.5));
+        }
+      }
+      // Tar rooftop deck
+      ctx.fillStyle = '#6f7885';
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 2, -d / 2 - h - 3, w + 4, d * 0.88, 9);
+      ctx.fill();
+      // Iconic wooden NYC rooftop water tower!
+      ctx.fillStyle = '#9e734e';
+      ctx.beginPath();
+      ctx.arc(w * 0.18, -h - 8, r * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#6b4d35';
+      ctx.beginPath();
+      ctx.moveTo(w * 0.18, -h - 26);
+      ctx.lineTo(w * 0.18 - r * 0.24, -h - 6);
+      ctx.lineTo(w * 0.18 + r * 0.24, -h - 6);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'glassTower': {
+      const w = r * 1.48;
+      const d = r * 1.35;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -d / 2 - h, w, d + h, 10);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(28, 58, 84, 0.28)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Glass curtain-wall strips & diagonal sky sheen
+      ctx.fillStyle = 'rgba(230, 248, 255, 0.55)';
+      for (let rr = 0; rr < 7; rr++) {
+        const y = -d / 2 - h + d * 0.9 + rr * ((h + d * 0.1) / 7.4);
+        ctx.fillRect(-w * 0.42, y, w * 0.84, Math.max(8, h * 0.065));
+      }
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.24)';
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.35, -h + 10);
+      ctx.lineTo(-w * 0.05, -h + 10);
+      ctx.lineTo(-w * 0.35, d * 0.3);
+      ctx.closePath();
+      ctx.fill();
+      // Glass rooftop helipad / deck
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 - 2, -d / 2 - h - 4, w + 4, d * 0.86, 10);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, -h - 6, r * 0.26, 0, Math.PI * 2);
+      ctx.stroke();
+      break;
+    }
+    case 'wedgeTower': {
+      // Iconic Flatiron-style triangular limestone skyscraper!
+      const w = r * 1.56;
+      const d = r * 1.4;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(0, -d * 0.65 - h);
+      ctx.lineTo(w * 0.54, d * 0.45 - h);
+      ctx.lineTo(w * 0.54, d * 0.45);
+      ctx.lineTo(0, d * 0.62);
+      ctx.lineTo(-w * 0.54, d * 0.45);
+      ctx.lineTo(-w * 0.54, d * 0.45 - h);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Vertical window bays
+      ctx.fillStyle = '#fff5d8';
+      for (let rr = 0; rr < 6; rr++) {
+        const y = -h + d * 0.55 + rr * (h / 6.6);
+        for (const cx of [-w * 0.3, -w * 0.12, w * 0.12, w * 0.3]) {
+          ctx.fillRect(cx - 7, y, 14, Math.max(8, h * 0.06));
+        }
+      }
+      // Triangular roof deck
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(0, -d * 0.68 - h);
+      ctx.lineTo(w * 0.56, d * 0.44 - h);
+      ctx.lineTo(-w * 0.56, d * 0.44 - h);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'metroSpire': {
+      // Tiered Art-Deco Empire-style Mega-Skyscraper with gleaming spire!
+      const w = r * 1.54;
+      const d = r * 1.38;
+      // Lower base tower
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -d / 2 - h * 0.68, w, d + h * 0.68, 10);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Upper stepped Art-Deco crown
+      const w2 = w * 0.68;
+      ctx.fillStyle = '#e4ebf2';
+      ctx.beginPath();
+      ctx.roundRect(-w2 / 2, -d * 0.4 - h, w2, h * 0.55 + d * 0.55, 8);
+      ctx.fill();
+      ctx.stroke();
+      // Window bands
+      ctx.fillStyle = '#e6f5ff';
+      for (let rr = 0; rr < 6; rr++) {
+        const y = -h * 0.52 + rr * ((h * 0.55 + d * 0.3) / 6.2);
+        ctx.fillRect(-w * 0.4, y, w * 0.8, 10);
+      }
+      for (let rr = 0; rr < 4; rr++) {
+        const y = -h * 0.92 + rr * ((h * 0.36) / 4);
+        ctx.fillRect(-w2 * 0.36, y, w2 * 0.72, 9);
+      }
+      // Crown roof & gleaming spire needle
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.roundRect(-w2 * 0.46, -d * 0.36 - h - 4, w2 * 0.92, d * 0.62, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#f5d26b';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(0, -h - 8);
+      ctx.lineTo(0, -h - 68);
+      ctx.stroke();
+      ctx.fillStyle = '#fff5bd';
+      ctx.beginPath();
+      ctx.arc(0, -h - 70, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
   }
 
   ctx.restore();
@@ -493,8 +854,8 @@ function drawProp(ctx, p) {
 export function renderGame(ctx, state, width, height, pointerGuide = null) {
   ctx.clearRect(0, 0, width, height);
 
-  // Outer sky/meadow backdrop
-  ctx.fillStyle = '#b4d8a5';
+  // Outer backdrop matching the active map
+  ctx.fillStyle = state.town.mapId === 'metro' ? '#b8c1cc' : '#b4d8a5';
   ctx.fillRect(0, 0, width, height);
 
   const cam = state.camera;

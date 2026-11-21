@@ -1,6 +1,7 @@
 let ctx = null;
 let lastPersonSfxAt = 0;
 let lastHonkAt = 0;
+let lastBellAt = 0;
 let wilhelmBuffer = null;
 let wilhelmLoading = false;
 
@@ -241,6 +242,36 @@ export function playVehicleHonk(shape = 'car', enabled = true, roll = Math.rando
       o2.start(b.start);
       o1.stop(b.start + b.dur + 0.02);
       o2.stop(b.start + b.dur + 0.02);
+    }
+  } catch {
+    // Ignore audio errors
+  }
+}
+
+export function playBikeBell(enabled = true) {
+  if (!enabled) return;
+  try {
+    const ac = getContext();
+    if (!ac) return;
+    const now = ac.currentTime;
+    if (now - lastBellAt < 0.22) return;
+    lastBellAt = now;
+
+    // Bright two-ding metallic bicycle bell ("ring-ring!")
+    const dings = [now, now + 0.095];
+    for (const start of dings) {
+      for (const [freq, amp] of [[2480, 0.06], [4960, 0.032]]) {
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.exponentialRampToValueAtTime(amp, start + 0.006);
+        gain.gain.exponentialRampToValueAtTime(0.0008, start + 0.22);
+        osc.connect(gain).connect(ac.destination);
+        osc.start(start);
+        osc.stop(start + 0.23);
+      }
     }
   } catch {
     // Ignore audio errors

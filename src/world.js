@@ -1,10 +1,13 @@
 import { PROPS } from './catalog.js';
 
-export const WORLD_HALF = 1400; // 2800 x 2800 town
+export const WORLD_HALF = 1400; // 2800 x 2800 Cozy Town
+export const METRO_HALF = 1650; // 3300 x 3300 Metro City
 export const LANE_OFFSET = 26;
+export const BIKE_LANE_OFFSET = 43;
 
 const SHIRT_COLORS = ['#e8636b', '#5294d8', '#f2b84b', '#5db57d', '#9b74d6', '#e88b58', '#4fa8a6'];
 const HAIR_COLORS = ['#4a3525', '#7c5132', '#d4a14c', '#2d3340', '#b8563c'];
+const BIKE_COLORS = ['#e85858', '#3c99dc', '#45b87c', '#f2a93b', '#9a6bd6', '#334155'];
 
 export function makeRng(seed = 20261120) {
   let s = seed >>> 0;
@@ -14,7 +17,8 @@ export function makeRng(seed = 20261120) {
   };
 }
 
-export function createTown(seed = 20261120) {
+export function createTown(seed = 20261120, mapId = 'town') {
+  if (mapId === 'metro') return createMetroCity(seed);
   const rand = makeRng(seed);
   const props = [];
   let nextId = 1;
@@ -197,5 +201,253 @@ export function createTown(seed = 20261120) {
     }
   }
 
-  return { halfSize: WORLD_HALF, roads, props };
+  return { mapId: 'town', halfSize: WORLD_HALF, roads, props };
+}
+
+function createMetroCity(seed = 20261120) {
+  const rand = makeRng((seed ^ 0x51f2a9c3) >>> 0);
+  const halfSize = METRO_HALF;
+  const roads = [-980, -320, 320, 980];
+  const props = [];
+  let nextId = 1;
+
+  const canPlace = (x, y, radius, pad = 10) => {
+    if (Math.abs(x) > halfSize - radius - 40 || Math.abs(y) > halfSize - radius - 40) return false;
+    if (Math.hypot(x, y) < radius + 34) return false;
+    // Keep Central Park pond clear of props
+    if (Math.hypot((x + 95) / 62, (y + 90) / 44) < 1) return false;
+    for (const p of props) {
+      if (Math.hypot(x - p.x, y - p.y) < radius + p.radius + pad) return false;
+    }
+    return true;
+  };
+
+  const add = (type, x, y, angle = 0, extra = {}) => {
+    const def = PROPS[type];
+    if (!canPlace(x, y, def.radius)) return false;
+    props.push({
+      id: nextId++,
+      type,
+      ...def,
+      ...extra,
+      x,
+      y,
+      angle,
+      vx: 0,
+      vy: 0,
+      z: 0,
+      vz: 0,
+      tilt: 0,
+      tiltAngle: 0,
+      spinVel: 0,
+      swallowing: false,
+      swallowProgress: 0,
+      swallowed: false,
+      bump: 0,
+    });
+    return true;
+  };
+
+  const makePersonExtra = () => ({
+    color: SHIRT_COLORS[Math.floor(rand() * SHIRT_COLORS.length)],
+    accent: HAIR_COLORS[Math.floor(rand() * HAIR_COLORS.length)],
+    wander: {
+      dir: rand() * Math.PI * 2,
+      speed: 28 + rand() * 20,
+      timer: 1.0 + rand() * 2.4,
+      pauseTimer: rand() < 0.18 ? 0.4 + rand() * 0.8 : 0,
+      walkPhase: rand() * Math.PI * 2,
+    },
+  });
+
+  // 1. Central Park starter oasis around (0, 0)
+  const starterTiny = ['cone', 'flower', 'hydrant', 'newsstand', 'bollard'];
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2 + rand() * 0.25;
+    const dist = 58 + rand() * 225;
+    add(starterTiny[i % starterTiny.length], Math.cos(a) * dist, Math.sin(a) * dist, rand() * Math.PI * 2);
+  }
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2 + rand() * 0.4;
+    const dist = 72 + rand() * 175;
+    add('person', Math.cos(a) * dist, Math.sin(a) * dist, rand() * Math.PI * 2, makePersonExtra());
+  }
+  const starterSmall = ['hotdogCart', 'subwaySign', 'bench', 'trashcan', 'lamp'];
+  for (let i = 0; i < 28; i++) {
+    const a = (i / 28) * Math.PI * 2 + rand() * 0.3;
+    const dist = 135 + rand() * 110;
+    add(starterSmall[i % starterSmall.length], Math.cos(a) * dist, Math.sin(a) * dist, a + Math.PI / 2);
+  }
+
+  // 2. Bustling yellow-cab avenues + trucks & buses
+  const pickVehicle = () => {
+    const r = rand();
+    if (r < 0.52) return 'carYellow'; // NYC yellow cabs!
+    if (r < 0.65) return 'carRed';
+    if (r < 0.78) return 'carBlue';
+    if (r < 0.90) return 'bus';
+    return 'truck';
+  };
+
+  for (const roadY of roads) {
+    for (let x = -1460; x <= 1460; x += 185) {
+      if (roads.some((rx) => Math.abs(x - rx) < 120)) continue;
+      const lane = rand() < 0.5 ? -LANE_OFFSET : LANE_OFFSET;
+      const dir = lane > 0 ? 1 : -1;
+      const pick = pickVehicle();
+      const isBig = pick === 'truck' || pick === 'bus';
+      const angle = dir > 0 ? 0 : Math.PI;
+      const speed = isBig ? 46 + rand() * 20 : 66 + rand() * 34;
+      add(pick, x + (rand() - 0.5) * 30, roadY + lane, angle, {
+        road: {
+          axis: 'x',
+          roadCoord: roadY,
+          laneOffset: lane,
+          laneWidth: LANE_OFFSET,
+          dir,
+          speed,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+  for (const roadX of roads) {
+    for (let y = -1460; y <= 1460; y += 195) {
+      if (roads.some((ry) => Math.abs(y - ry) < 120)) continue;
+      const lane = rand() < 0.5 ? -LANE_OFFSET : LANE_OFFSET;
+      const dir = lane > 0 ? 1 : -1;
+      const pick = pickVehicle();
+      const isBig = pick === 'truck' || pick === 'bus';
+      const angle = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      const speed = isBig ? 46 + rand() * 20 : 66 + rand() * 34;
+      add(pick, roadX + lane, y + (rand() - 0.5) * 30, angle, {
+        road: {
+          axis: 'y',
+          roadCoord: roadX,
+          laneOffset: lane,
+          laneWidth: LANE_OFFSET,
+          dir,
+          speed,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+
+  // 3. City cyclists riding in the street bike lanes (±43px along each avenue)
+  for (const roadY of roads) {
+    for (let x = -1350; x <= 1350; x += 440) {
+      if (roads.some((rx) => Math.abs(x - rx) < 110)) continue;
+      const dir = rand() < 0.5 ? 1 : -1;
+      const lane = dir > 0 ? BIKE_LANE_OFFSET : -BIKE_LANE_OFFSET;
+      const angle = dir > 0 ? 0 : Math.PI;
+      add('cyclist', x + (rand() - 0.5) * 80, roadY + lane, angle, {
+        color: SHIRT_COLORS[Math.floor(rand() * SHIRT_COLORS.length)],
+        accent: BIKE_COLORS[Math.floor(rand() * BIKE_COLORS.length)],
+        pedalPhase: rand() * Math.PI * 2,
+        road: {
+          axis: 'x',
+          roadCoord: roadY,
+          laneOffset: lane,
+          laneWidth: BIKE_LANE_OFFSET,
+          dir,
+          speed: 52 + rand() * 24,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+  for (const roadX of roads) {
+    for (let y = -1350; y <= 1350; y += 440) {
+      if (roads.some((ry) => Math.abs(y - ry) < 110)) continue;
+      const dir = rand() < 0.5 ? 1 : -1;
+      const lane = dir > 0 ? BIKE_LANE_OFFSET : -BIKE_LANE_OFFSET;
+      const angle = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      add('cyclist', roadX + lane, y + (rand() - 0.5) * 80, angle, {
+        color: SHIRT_COLORS[Math.floor(rand() * SHIRT_COLORS.length)],
+        accent: BIKE_COLORS[Math.floor(rand() * BIKE_COLORS.length)],
+        pedalPhase: rand() * Math.PI * 2,
+        road: {
+          axis: 'y',
+          roadCoord: roadX,
+          laneOffset: lane,
+          laneWidth: BIKE_LANE_OFFSET,
+          dir,
+          speed: 52 + rand() * 24,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+
+  // 4. Towering NYC Landmarks & Glass Skyscrapers (Tier 7)
+  add('metroSpire', 0, -1320, 0);
+  add('wedgeTower', -1320, -1320, 0);
+  add('wedgeTower', 1320, 1320, 0);
+  add('glassTower', 1320, -1320, 0);
+  add('glassTower', -1320, 1320, 0);
+  add('glassTower', -650, -1320, 0);
+  add('glassTower', 650, -1320, 0);
+  add('glassTower', -650, 1320, 0);
+  add('glassTower', 650, 1320, 0);
+  add('skyscraper', 0, 1320, 0);
+
+  // 5. High-Rise Water Tower Blocks & City Offices (Tier 6)
+  const highRiseSpots = [
+    [-1320, -650], [1320, -650],
+    [-1320, 0], [1320, 0],
+    [-1320, 650], [1320, 650],
+    [-650, -650], [650, -650],
+    [-650, 650], [650, 650],
+  ];
+  highRiseSpots.forEach(([gx, gy], idx) => {
+    const pick = idx % 3 === 0 ? 'waterTowerBlock' : idx % 3 === 1 ? 'office' : 'apartments';
+    add(pick, gx + (rand() - 0.5) * 35, gy + (rand() - 0.5) * 35, 0);
+  });
+
+  // 6. Classic Brownstones & Corner Cafes (Tier 5) in inner avenues
+  const midBlocks = [
+    [0, -650], [-650, 0], [650, 0], [0, 650],
+    [-650, -650], [650, -650], [-650, 650], [650, 650],
+  ];
+  for (const [bx, by] of midBlocks) {
+    for (const [ox, oy] of [[-125, -125], [125, -125], [-125, 125], [125, 125]]) {
+      const pick = rand() < 0.7 ? 'brownstone' : 'cafe';
+      add(pick, bx + ox + (rand() - 0.5) * 20, by + oy + (rand() - 0.5) * 20, 0);
+    }
+  }
+
+  // 7. Scatter Central Park trees, sidewalk details, hot dog carts, subway signs & commuters
+  const scatter = [
+    ['oak', 26],
+    ['pine', 22],
+    ['bush', 34],
+    ['hotdogCart', 18],
+    ['subwaySign', 20],
+    ['newsstand', 26],
+    ['bench', 22],
+    ['lamp', 34],
+    ['trashcan', 28],
+    ['hydrant', 28],
+    ['cone', 26],
+    ['person', 42],
+  ];
+  for (const [type, count] of scatter) {
+    let placed = 0;
+    let attempts = 0;
+    while (placed < count && attempts < count * 12) {
+      attempts++;
+      const x = (rand() * 2 - 1) * (halfSize - 95);
+      const y = (rand() * 2 - 1) * (halfSize - 95);
+      if (roads.some((r) => Math.abs(x - r) < 68 || Math.abs(y - r) < 68)) continue;
+      const extra = type === 'person' ? makePersonExtra() : {};
+      if (add(type, x, y, rand() * Math.PI * 2, extra)) placed++;
+    }
+  }
+
+  return { mapId: 'metro', halfSize, roads, props };
 }
