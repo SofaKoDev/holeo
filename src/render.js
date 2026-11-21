@@ -2,17 +2,69 @@ function drawTownGround(ctx, town) {
   const half = town.halfSize;
   const isMetro = town.mapId === 'metro';
   const isMars = town.mapId === 'mars';
+  const isPlayroom = town.mapId === 'playroom';
 
-  // Base terrain: sunlit grass for Cozy Town, urban concrete for Metro City, red desert for Mars
-  ctx.fillStyle = isMars ? '#d47a57' : isMetro ? '#cfd5dc' : '#c5e2b5';
+  // Base terrain: sunlit grass for Cozy Town, urban concrete for Metro City, red desert for Mars, hardwood for Playroom
+  ctx.fillStyle = isPlayroom ? '#e6c79c' : isMars ? '#d47a57' : isMetro ? '#cfd5dc' : '#c5e2b5';
   ctx.fillRect(-half, -half, half * 2, half * 2);
 
+  // Subtle hardwood floor planks in the Playroom
+  if (isPlayroom) {
+    ctx.strokeStyle = 'rgba(156, 108, 62, 0.16)';
+    ctx.lineWidth = 2;
+    for (let y = -half; y <= half; y += 72) {
+      ctx.beginPath();
+      ctx.moveTo(-half, y);
+      ctx.lineTo(half, y);
+      ctx.stroke();
+    }
+  }
+
   // Outer border
-  ctx.strokeStyle = isMars ? '#a8573b' : isMetro ? '#8f9aa8' : '#9ec78e';
+  ctx.strokeStyle = isPlayroom ? '#b88856' : isMars ? '#a8573b' : isMetro ? '#8f9aa8' : '#9ec78e';
   ctx.lineWidth = 28;
   ctx.strokeRect(-half, -half, half * 2, half * 2);
 
-  if (isMars) {
+  if (isPlayroom) {
+    // Pastel foam play-mat tiles in each block
+    if (town.playTiles) {
+      for (const tile of town.playTiles) {
+        const s = tile.size;
+        ctx.fillStyle = tile.color;
+        ctx.beginPath();
+        ctx.roundRect(tile.x - s / 2, tile.y - s / 2, s, s, 26);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+      }
+    }
+    // Cozy central rainbow play-rug at (0, 0)
+    const rugRings = [
+      { half: 198, rad: 46, color: '#ef767a' },
+      { half: 184, rad: 40, color: '#ffd166' },
+      { half: 170, rad: 34, color: '#7bd3a8' },
+      { half: 156, rad: 28, color: '#fff8ea' },
+    ];
+    for (const ring of rugRings) {
+      ctx.fillStyle = ring.color;
+      ctx.beginPath();
+      ctx.roundRect(-ring.half, -ring.half, ring.half * 2, ring.half * 2, ring.rad);
+      ctx.fill();
+    }
+    // Sunny center medallion on the play-rug
+    ctx.fillStyle = '#ffe599';
+    ctx.beginPath();
+    ctx.arc(0, 0, 56, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#f5b841';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([10, 8]);
+    ctx.beginPath();
+    ctx.arc(0, 0, 72, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else if (isMars) {
     // Martian craters scattered across the red desert
     if (town.craters) {
       for (const c of town.craters) {
@@ -96,23 +148,27 @@ function drawTownGround(ctx, town) {
     ctx.fill();
   }
 
-  // Paved sidewalks & avenues / Martian hover-highways
-  const roadW = isMetro || isMars ? 116 : 104;
-  const sideW = isMetro || isMars ? 148 : 132;
-  ctx.fillStyle = isMars ? '#8c6252' : isMetro ? '#e3e6ea' : '#eee3ce';
+  // Paved sidewalks & avenues / Martian hover-highways / Play-rug toy roads
+  const roadW = isMetro || isMars || isPlayroom ? 116 : 104;
+  const sideW = isMetro || isMars || isPlayroom ? 148 : 132;
+  ctx.fillStyle = isPlayroom ? '#bfe8c4' : isMars ? '#8c6252' : isMetro ? '#e3e6ea' : '#eee3ce';
   for (const r of town.roads) {
     ctx.fillRect(-half, r - sideW / 2, half * 2, sideW);
     ctx.fillRect(r - sideW / 2, -half, sideW, half * 2);
   }
-  ctx.fillStyle = isMars ? '#364354' : isMetro ? '#4a5566' : '#626f82';
+  ctx.fillStyle = isPlayroom ? '#5a6678' : isMars ? '#364354' : isMetro ? '#4a5566' : '#626f82';
   for (const r of town.roads) {
     ctx.fillRect(-half, r - roadW / 2, half * 2, roadW);
     ctx.fillRect(r - roadW / 2, -half, roadW, half * 2);
   }
 
-  // Outer bike lanes (Metro) or glowing cyan hover-scooter lanes (Mars)
-  if (isMetro || isMars) {
-    ctx.fillStyle = isMars ? 'rgba(94, 240, 255, 0.22)' : 'rgba(72, 180, 118, 0.36)';
+  // Outer bike lanes (Metro), glowing cyan hover-scooter lanes (Mars), or pastel scooter lanes (Playroom)
+  if (isMetro || isMars || isPlayroom) {
+    ctx.fillStyle = isPlayroom
+      ? 'rgba(255, 212, 71, 0.32)'
+      : isMars
+        ? 'rgba(94, 240, 255, 0.22)'
+        : 'rgba(72, 180, 118, 0.36)';
     for (const r of town.roads) {
       ctx.fillRect(-half, r - 50, half * 2, 14);
       ctx.fillRect(-half, r + 36, half * 2, 14);
@@ -123,7 +179,19 @@ function drawTownGround(ctx, town) {
 
   // Center lane lines
   ctx.save();
-  if (isMars) {
+  if (isPlayroom) {
+    ctx.strokeStyle = 'rgba(255, 224, 102, 0.9)';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([22, 16]);
+    for (const r of town.roads) {
+      ctx.beginPath();
+      ctx.moveTo(-half + 30, r);
+      ctx.lineTo(half - 30, r);
+      ctx.moveTo(r, -half + 30);
+      ctx.lineTo(r, half - 30);
+      ctx.stroke();
+    }
+  } else if (isMars) {
     ctx.strokeStyle = 'rgba(94, 240, 255, 0.78)';
     ctx.lineWidth = 3.5;
     ctx.setLineDash([28, 18]);
@@ -164,7 +232,7 @@ function drawTownGround(ctx, town) {
   ctx.restore();
 
   // Intersections & crosswalks / glowing hover-pads
-  const roadColor = isMars ? '#364354' : isMetro ? '#4a5566' : '#626f82';
+  const roadColor = isPlayroom ? '#5a6678' : isMars ? '#364354' : isMetro ? '#4a5566' : '#626f82';
   ctx.fillStyle = roadColor;
   for (const rx of town.roads) {
     for (const ry of town.roads) {
@@ -250,9 +318,14 @@ function drawProp(ctx, p) {
       p.shape !== 'marsRover' &&
       p.shape !== 'hoverHauler' &&
       p.shape !== 'hoverScooter' &&
+      p.shape !== 'toyCar' &&
+      p.shape !== 'toyTruck' &&
+      p.shape !== 'toyTrain' &&
+      p.shape !== 'toyScooter' &&
       p.shape !== 'bench' &&
       p.shape !== 'person' &&
-      p.shape !== 'alien'
+      p.shape !== 'alien' &&
+      p.shape !== 'windupToy'
     ) {
       ctx.rotate(p.angle * 0.55);
     }
@@ -1343,6 +1416,762 @@ function drawProp(ctx, p) {
       ctx.fill();
       break;
     }
+    case 'toyBrick': {
+      // Classic colorful studded plastic building brick
+      const bw = r * 1.65;
+      const bd = r * 1.1;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-bw / 2, -bd / 2 - h * 0.45, bw, bd + h * 0.45, 3);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.roundRect(-bw / 2, -bd / 2 - h * 0.45, bw, bd * 0.85, 3);
+      ctx.fill();
+      // 4 raised brick studs on top
+      ctx.fillStyle = p.color;
+      for (const sx of [-bw * 0.24, bw * 0.24]) {
+        for (const sy of [-bd * 0.28 - h * 0.45, bd * 0.08 - h * 0.45]) {
+          ctx.beginPath();
+          ctx.arc(sx, sy, r * 0.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      break;
+    }
+    case 'crayon': {
+      ctx.save();
+      ctx.rotate(p.angle);
+      // Wax barrel
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-r * 1.05, -r * 0.38, r * 1.7, r * 0.76, 3);
+      ctx.fill();
+      // Pointed wax tip
+      ctx.beginPath();
+      ctx.moveTo(r * 0.65, -r * 0.34);
+      ctx.lineTo(r * 1.15, 0);
+      ctx.lineTo(r * 0.65, r * 0.34);
+      ctx.closePath();
+      ctx.fill();
+      // Paper wrapper & dark bands
+      ctx.fillStyle = 'rgba(255,255,255,0.32)';
+      ctx.fillRect(-r * 0.72, -r * 0.38, r * 1.12, r * 0.76);
+      ctx.fillStyle = p.accent;
+      ctx.fillRect(-r * 0.62, -r * 0.38, r * 0.16, r * 0.76);
+      ctx.fillRect(r * 0.16, -r * 0.38, r * 0.16, r * 0.76);
+      ctx.restore();
+      break;
+    }
+    case 'rubberDuck': {
+      // Plump yellow rubber duck body
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.ellipse(-1, 1, r * 0.86, r * 0.68, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Wing detail
+      ctx.fillStyle = '#f2be2c';
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.18, 1.5, r * 0.45, r * 0.28, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Duck head
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(r * 0.32, -h * 0.78, r * 0.56, 0, Math.PI * 2);
+      ctx.fill();
+      // Orange bill
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.ellipse(r * 0.86, -h * 0.72, r * 0.34, r * 0.2, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      // Cute eye
+      ctx.fillStyle = '#212b36';
+      ctx.beginPath();
+      ctx.arc(r * 0.46, -h * 0.9, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'windupToy': {
+      const phase = p.wander ? p.wander.walkPhase : 0;
+      const moving = p.wander && (Math.abs(p.vx) > 2 || Math.abs(p.vy) > 2);
+      const bob = moving && !p.swallowing ? Math.abs(Math.sin(phase)) * 3.4 : 0;
+      const stride = moving && !p.swallowing ? Math.sin(phase) * 3.8 : 0;
+      ctx.save();
+      if (p.swallowing) ctx.rotate(p.angle);
+      // Little clacking toy feet
+      ctx.fillStyle = '#f7c548';
+      ctx.beginPath();
+      ctx.roundRect(-6.5, 2 + stride * 0.5, 5.5, 4.5, 2);
+      ctx.roundRect(1, 2 - stride * 0.5, 5.5, 4.5, 2);
+      ctx.fill();
+      // Golden wind-up key on back/top
+      const keySpin = Math.sin(phase * 1.4) * 2.5;
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(0, -14 - bob);
+      ctx.lineTo(0, -20 - bob);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(-3.5, -20.5 - bob, Math.max(1.5, 3.2 - Math.abs(keySpin) * 0.4), 2.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(3.5, -20.5 - bob, Math.max(1.5, 3.2 - Math.abs(keySpin) * 0.4), 2.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      // Cute toy robot/chibi body
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-7, -9 - bob, 14, 13, 5);
+      ctx.fill();
+      // Head with big button eyes
+      ctx.fillStyle = '#fff5e4';
+      ctx.beginPath();
+      ctx.arc(0, -12.5 - bob, 5.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#253240';
+      ctx.beginPath();
+      ctx.arc(-2.2, -12.5 - bob, 1.4, 0, Math.PI * 2);
+      ctx.arc(2.2, -12.5 - bob, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'abcBlock': {
+      const s = r * 1.55;
+      // Chunky wooden cube
+      ctx.fillStyle = '#e8c484';
+      ctx.beginPath();
+      ctx.roundRect(-s / 2, -s / 2 - h * 0.55, s, s + h * 0.55, 5);
+      ctx.fill();
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Top lighter wooden face
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-s / 2 + 2, -s / 2 - h * 0.55 + 2, s - 4, s * 0.78, 4);
+      ctx.fill();
+      // Bold painted alphabet letter
+      ctx.fillStyle = p.accent;
+      ctx.font = `900 ${Math.round(r * 0.92)}px ui-rounded, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(p.letter || 'A', 0, -h * 0.42);
+      break;
+    }
+    case 'ringStack': {
+      // Wooden base & stacked rainbow rings
+      ctx.fillStyle = '#d4a36a';
+      ctx.beginPath();
+      ctx.ellipse(0, 4, r * 0.92, r * 0.62, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const rings = [
+        { y: -1, rx: r * 0.84, c: '#ef5b5b' },
+        { y: -7, rx: r * 0.72, c: '#f5a442' },
+        { y: -13, rx: r * 0.6, c: '#ffd447' },
+        { y: -19, rx: r * 0.48, c: '#52b874' },
+        { y: -24, rx: r * 0.36, c: '#4da3e8' },
+      ];
+      for (const rg of rings) {
+        ctx.fillStyle = rg.c;
+        ctx.beginPath();
+        ctx.ellipse(0, rg.y, rg.rx, rg.rx * 0.62, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+      // Wooden topper knob
+      ctx.fillStyle = '#e6bd8a';
+      ctx.beginPath();
+      ctx.arc(0, -28, r * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'plushBunny': {
+      // Soft bunny body
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.ellipse(0, 1, r * 0.76, r * 0.68, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Floppy ears
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.34, -h * 1.15, r * 0.22, r * 0.56, -0.22, 0, Math.PI * 2);
+      ctx.ellipse(r * 0.34, -h * 1.15, r * 0.22, r * 0.56, 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.34, -h * 1.12, r * 0.11, r * 0.38, -0.22, 0, Math.PI * 2);
+      ctx.ellipse(r * 0.34, -h * 1.12, r * 0.11, r * 0.38, 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      // Bunny head, button eyes & pink nose
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.52, r * 0.58, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2c3540';
+      ctx.beginPath();
+      ctx.arc(-r * 0.2, -h * 0.58, 2.2, 0, Math.PI * 2);
+      ctx.arc(r * 0.2, -h * 0.58, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.44, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'toyScooter': {
+      ctx.save();
+      ctx.rotate(p.angle);
+      // Chunky toy wheels
+      ctx.fillStyle = '#33404f';
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.85, -3.5, r * 0.55, 7, 3);
+      ctx.roundRect(r * 0.32, -3.5, r * 0.55, 7, 3);
+      ctx.fill();
+      // Colorful wooden scooter deck & handlebars
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.72, -5.5, r * 1.44, 11, 5);
+      ctx.fill();
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      ctx.moveTo(r * 0.45, -r * 0.48);
+      ctx.lineTo(r * 0.45, r * 0.48);
+      ctx.stroke();
+      // Cute plush bear rider head
+      ctx.fillStyle = '#d49a6a';
+      ctx.beginPath();
+      ctx.arc(-2, 0, 5.5, 0, Math.PI * 2);
+      ctx.arc(-5, -4.5, 2.3, 0, Math.PI * 2);
+      ctx.arc(-5, 4.5, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'teddyBear': {
+      // Huggable stuffed teddy bear
+      ctx.fillStyle = p.color;
+      // Legs & arms
+      ctx.beginPath();
+      ctx.arc(-r * 0.48, r * 0.38, r * 0.32, 0, Math.PI * 2);
+      ctx.arc(r * 0.48, r * 0.38, r * 0.32, 0, Math.PI * 2);
+      ctx.arc(-r * 0.62, -r * 0.14, r * 0.28, 0, Math.PI * 2);
+      ctx.arc(r * 0.62, -r * 0.14, r * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      // Torso & lighter tummy patch
+      ctx.beginPath();
+      ctx.ellipse(0, 2, r * 0.62, r * 0.58, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.ellipse(0, 3, r * 0.36, r * 0.34, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Round ears & head
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(-r * 0.42, -h * 0.92, r * 0.24, 0, Math.PI * 2);
+      ctx.arc(r * 0.42, -h * 0.92, r * 0.24, 0, Math.PI * 2);
+      ctx.arc(0, -h * 0.62, r * 0.52, 0, Math.PI * 2);
+      ctx.fill();
+      // Snout, button eyes & red bow tie
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.ellipse(0, -h * 0.5, r * 0.24, r * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2b221e';
+      ctx.beginPath();
+      ctx.arc(-r * 0.18, -h * 0.68, 2.4, 0, Math.PI * 2);
+      ctx.arc(r * 0.18, -h * 0.68, 2.4, 0, Math.PI * 2);
+      ctx.arc(0, -h * 0.54, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ef5b5b';
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.22);
+      ctx.lineTo(-8, -h * 0.32);
+      ctx.lineTo(-8, -h * 0.12);
+      ctx.moveTo(0, -h * 0.22);
+      ctx.lineTo(8, -h * 0.32);
+      ctx.lineTo(8, -h * 0.12);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'plushDino': {
+      // Friendly plush green dinosaur with yellow back spines
+      ctx.fillStyle = p.accent;
+      for (let i = 0; i < 4; i++) {
+        const sy = -h * 0.9 + i * 7.5;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.34, sy);
+        ctx.lineTo(-r * 0.62, sy + 3);
+        ctx.lineTo(-r * 0.34, sy + 7);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Tail & plump body
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.3, r * 0.3);
+      ctx.quadraticCurveTo(-r * 0.95, r * 0.35, -r * 0.85, -r * 0.1);
+      ctx.quadraticCurveTo(-r * 0.55, r * 0.05, -r * 0.25, -r * 0.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(0, 2, r * 0.58, r * 0.56, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Neck & cute snouted head
+      ctx.beginPath();
+      ctx.ellipse(r * 0.26, -h * 0.72, r * 0.48, r * 0.36, -0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(-r * 0.12, -h * 0.65, r * 0.42, h * 0.55);
+      // Lighter belly & happy eye
+      ctx.fillStyle = '#e9f7d5';
+      ctx.beginPath();
+      ctx.ellipse(r * 0.18, 4, r * 0.28, r * 0.34, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#223029';
+      ctx.beginPath();
+      ctx.arc(r * 0.36, -h * 0.8, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'toyCar': {
+      ctx.save();
+      ctx.rotate(p.angle);
+      const len = r * 1.82;
+      const wid = r * 1.12;
+      // Chunky wooden/plastic toy wheels
+      ctx.fillStyle = '#2e3846';
+      ctx.beginPath();
+      ctx.roundRect(-len * 0.36, -wid * 0.58, len * 0.24, wid * 1.16, 4);
+      ctx.roundRect(len * 0.14, -wid * 0.58, len * 0.24, wid * 1.16, 4);
+      ctx.fill();
+      // Rounded toy car body
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-len / 2, -wid / 2, len, wid, 14);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Racing stripe
+      ctx.fillStyle = p.accent;
+      ctx.fillRect(-len * 0.46, -wid * 0.12, len * 0.92, wid * 0.24);
+      // Cute rounded wooden cab dome
+      ctx.fillStyle = '#fff5e0';
+      ctx.beginPath();
+      ctx.roundRect(-len * 0.18, -wid * 0.32, len * 0.38, wid * 0.64, 9);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'rockingHorse': {
+      // Classic wooden hobby / rocking horse!
+      const w = r * 1.85;
+      // Curved wooden rocker runner at the base
+      ctx.strokeStyle = '#9e6234';
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.38, r * 1.1, Math.PI * 0.22, Math.PI * 0.78);
+      ctx.stroke();
+      // Front & back wooden legs
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 9;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.24, -h * 0.18);
+      ctx.lineTo(-w * 0.32, r * 0.48);
+      ctx.moveTo(w * 0.24, -h * 0.18);
+      ctx.lineTo(w * 0.32, r * 0.48);
+      ctx.stroke();
+      // Yarn tail
+      ctx.strokeStyle = '#754624';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(-w * 0.36, -h * 0.34);
+      ctx.quadraticCurveTo(-w * 0.56, -h * 0.12, -w * 0.48, r * 0.18);
+      ctx.stroke();
+      // Horse torso
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w * 0.38, -h * 0.55, w * 0.76, r * 0.52, 14);
+      ctx.fill();
+      // Bright painted saddle
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.roundRect(-w * 0.15, -h * 0.58, w * 0.3, r * 0.4, 7);
+      ctx.fill();
+      // Neck & cute horse head
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(w * 0.16, -h * 0.32);
+      ctx.lineTo(w * 0.36, -h * 1.05);
+      ctx.lineTo(w * 0.56, -h * 0.88);
+      ctx.lineTo(w * 0.36, -h * 0.22);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(w * 0.45, -h * 0.92, r * 0.34, r * 0.22, 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      // Mane, ear, handle peg & eye
+      ctx.fillStyle = '#754624';
+      ctx.beginPath();
+      ctx.arc(w * 0.28, -h * 0.86, 5, 0, Math.PI * 2);
+      ctx.arc(w * 0.24, -h * 0.7, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#25211e';
+      ctx.beginPath();
+      ctx.arc(w * 0.48, -h * 0.96, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineCap = 'butt';
+      break;
+    }
+    case 'plushElephant': {
+      // Big floppy pink-lined ears
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.66, -h * 0.5, r * 0.42, r * 0.5, -0.2, 0, Math.PI * 2);
+      ctx.ellipse(r * 0.66, -h * 0.5, r * 0.42, r * 0.5, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.64, -h * 0.48, r * 0.25, r * 0.32, -0.2, 0, Math.PI * 2);
+      ctx.ellipse(r * 0.64, -h * 0.48, r * 0.25, r * 0.32, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Chubby body & feet
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(-r * 0.42, r * 0.35, r * 0.28, 0, Math.PI * 2);
+      ctx.arc(r * 0.42, r * 0.35, r * 0.28, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, r * 0.66, r * 0.58, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Head & curled trunk
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.52, r * 0.54, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = r * 0.26;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.36);
+      ctx.quadraticCurveTo(r * 0.14, r * 0.05, r * 0.36, -r * 0.06);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+      // Button eyes
+      ctx.fillStyle = '#253240';
+      ctx.beginPath();
+      ctx.arc(-r * 0.2, -h * 0.6, 3, 0, Math.PI * 2);
+      ctx.arc(r * 0.2, -h * 0.6, 3, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'toyTruck': {
+      ctx.save();
+      ctx.rotate(p.angle);
+      const len = r * 2.0;
+      const wid = r * 1.05;
+      // Chunky toy dump truck wheels
+      ctx.fillStyle = '#2d3745';
+      ctx.fillRect(-len * 0.38, -wid * 0.58, len * 0.22, wid * 1.16);
+      ctx.fillRect(len * 0.16, -wid * 0.58, len * 0.22, wid * 1.16);
+      // Yellow chassis & cab
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-len / 2, -wid / 2, len, wid, 10);
+      ctx.fill();
+      ctx.fillStyle = '#d8f1ff';
+      ctx.fillRect(len * 0.26, -wid * 0.34, len * 0.14, wid * 0.68);
+      // Bright red dump bed carrying colorful mini blocks!
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.roundRect(-len * 0.44, -wid * 0.42, len * 0.56, wid * 0.84, 7);
+      ctx.fill();
+      ctx.fillStyle = '#4da3e8';
+      ctx.fillRect(-len * 0.36, -wid * 0.28, len * 0.18, wid * 0.24);
+      ctx.fillStyle = '#52b874';
+      ctx.fillRect(-len * 0.14, -wid * 0.24, len * 0.18, wid * 0.24);
+      ctx.fillStyle = '#ffd447';
+      ctx.fillRect(-len * 0.28, wid * 0.04, len * 0.22, wid * 0.24);
+      ctx.restore();
+      break;
+    }
+    case 'toyTrain': {
+      ctx.save();
+      ctx.rotate(p.angle);
+      const len = r * 2.1;
+      const wid = r * 0.96;
+      // Bright red wooden train wheels
+      ctx.fillStyle = p.accent;
+      for (const wx of [-len * 0.38, -len * 0.04, len * 0.28]) {
+        ctx.fillRect(wx, -wid * 0.58, len * 0.16, wid * 1.16);
+      }
+      // Wooden locomotive boiler & cab
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-len / 2, -wid / 2, len, wid, 10);
+      ctx.fill();
+      // Cozy red cab roof at rear
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.roundRect(-len * 0.46, -wid * 0.42, len * 0.38, wid * 0.84, 6);
+      ctx.fill();
+      // Golden bell & black smokestack in front
+      ctx.fillStyle = '#ffd447';
+      ctx.beginPath();
+      ctx.arc(len * 0.06, 0, wid * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#2d3745';
+      ctx.beginPath();
+      ctx.arc(len * 0.32, 0, wid * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'blockHouse': {
+      // Stacked wooden building blocks forming a cozy cottage
+      const w = r * 1.54;
+      const d = r * 1.2;
+      // Left & right pillar blocks
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -d / 2 - h * 0.45, w * 0.34, d + h * 0.45, 6);
+      ctx.roundRect(w / 2 - w * 0.34, -d / 2 - h * 0.45, w * 0.34, d + h * 0.45, 6);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.14)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      // Center lintel block
+      ctx.fillStyle = '#a8dcff';
+      ctx.beginPath();
+      ctx.roundRect(-w * 0.18, -d / 2 - h * 0.45, w * 0.36, d * 0.55 + h * 0.2, 5);
+      ctx.fill();
+      ctx.stroke();
+      // Big bright triangular prism roof block!
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(0, -d / 2 - h * 1.18);
+      ctx.lineTo(w * 0.58, -d / 2 - h * 0.38);
+      ctx.lineTo(-w * 0.58, -d / 2 - h * 0.38);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      break;
+    }
+    case 'blockArch': {
+      // Wooden pillar blocks + big rainbow arch block
+      const w = r * 1.58;
+      const d = r * 1.24;
+      ctx.fillStyle = '#f5d99e';
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -d / 2 - h * 0.5, w * 0.3, d + h * 0.5, 6);
+      ctx.roundRect(w / 2 - w * 0.3, -d / 2 - h * 0.5, w * 0.3, d + h * 0.5, 6);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.14)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      // Colorful arch bridge block on top
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w * 0.54, -d / 2 - h * 0.92, w * 1.08, h * 0.55 + d * 0.35, 16);
+      ctx.fill();
+      ctx.stroke();
+      // Inner arch cutout accent
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.38, w * 0.24, Math.PI, 0);
+      ctx.fill();
+      break;
+    }
+    case 'blockTower': {
+      // Multi-story stacked colorful wooden ABC block tower!
+      const w = r * 1.38;
+      const d = r * 1.22;
+      const stack = [
+        { y: -d * 0.2 - h * 0.32, ww: w, hh: d * 0.72 + h * 0.36, c: '#f7d89c', border: '#ef5b5b', ch: 'A' },
+        { y: -d * 0.2 - h * 0.68, ww: w * 0.86, hh: h * 0.38 + d * 0.2, c: '#bce6ff', border: '#4da3e8', ch: 'B' },
+        { y: -d * 0.2 - h * 1.0, ww: w * 0.72, hh: h * 0.34 + d * 0.16, c: '#c8f2d4', border: '#52b874', ch: 'C' },
+      ];
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (const blk of stack) {
+        ctx.fillStyle = blk.c;
+        ctx.beginPath();
+        ctx.roundRect(-blk.ww / 2, blk.y, blk.ww, blk.hh, 8);
+        ctx.fill();
+        ctx.strokeStyle = blk.border;
+        ctx.lineWidth = 4;
+        ctx.stroke();
+        ctx.fillStyle = blk.border;
+        ctx.font = `900 ${Math.round(blk.ww * 0.34)}px ui-rounded, system-ui, sans-serif`;
+        ctx.fillText(blk.ch, 0, blk.y + blk.hh * 0.55);
+      }
+      // Pointed wooden cone block on top
+      ctx.fillStyle = '#ffd447';
+      ctx.beginPath();
+      ctx.moveTo(0, -d * 0.2 - h * 1.48);
+      ctx.lineTo(w * 0.32, -d * 0.2 - h * 0.98);
+      ctx.lineTo(-w * 0.32, -d * 0.2 - h * 0.98);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.14)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      break;
+    }
+    case 'toyChest': {
+      // Big cozy wooden toy chest with toys peeking out!
+      const w = r * 1.62;
+      const d = r * 1.24;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -d / 2 - h * 0.62, w, d + h * 0.62, 12);
+      ctx.fill();
+      ctx.strokeStyle = '#99582e';
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+      // Decorative yellow star latch
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(0, d * 0.08, 12, 0, Math.PI * 2);
+      ctx.fill();
+      // Open wooden lid rim & colorful plush/ball peeking out
+      ctx.fillStyle = '#6e3f22';
+      ctx.beginPath();
+      ctx.roundRect(-w * 0.44, -d / 2 - h * 0.66, w * 0.88, d * 0.56, 8);
+      ctx.fill();
+      ctx.fillStyle = '#ef5b5b';
+      ctx.beginPath();
+      ctx.arc(-w * 0.2, -d / 2 - h * 0.52, r * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#4da3e8';
+      ctx.beginPath();
+      ctx.roundRect(-w * 0.02, -d / 2 - h * 0.72, r * 0.38, r * 0.38, 5);
+      ctx.fill();
+      ctx.fillStyle = '#ffd447';
+      ctx.beginPath();
+      ctx.arc(w * 0.24, -d / 2 - h * 0.48, r * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'playTent': {
+      // Cozy striped playroom teepee tent with wooden poles!
+      // Crossed wooden poles sticking out top
+      ctx.strokeStyle = '#b57c47';
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.22, -h * 1.24);
+      ctx.lineTo(r * 0.18, -h * 0.75);
+      ctx.moveTo(r * 0.22, -h * 1.24);
+      ctx.lineTo(-r * 0.18, -h * 0.75);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+      // Cream canvas cone body
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 1.12);
+      ctx.lineTo(r * 0.92, r * 0.48);
+      ctx.quadraticCurveTo(0, r * 0.72, -r * 0.92, r * 0.48);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.14)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Cheerful coral-red canvas stripe
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 1.12);
+      ctx.lineTo(r * 0.46, r * 0.58);
+      ctx.lineTo(r * 0.2, r * 0.62);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 1.12);
+      ctx.lineTo(-r * 0.46, r * 0.58);
+      ctx.lineTo(-r * 0.2, r * 0.62);
+      ctx.closePath();
+      ctx.fill();
+      // Cozy dark doorway opening
+      ctx.fillStyle = '#47364d';
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.25);
+      ctx.lineTo(r * 0.28, r * 0.58);
+      ctx.lineTo(-r * 0.28, r * 0.58);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'blockCastle': {
+      // Colossal wooden block castle with twin turrets, central keep & flags!
+      const w = r * 1.62;
+      const d = r * 1.25;
+      // Central castle wall & arch gate
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w * 0.42, -d * 0.35 - h * 0.62, w * 0.84, d * 0.85 + h * 0.62, 8);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Castle archway door
+      ctx.fillStyle = '#63473a';
+      ctx.beginPath();
+      ctx.arc(0, d * 0.32, w * 0.16, Math.PI, 0);
+      ctx.lineTo(w * 0.16, d * 0.5);
+      ctx.lineTo(-w * 0.16, d * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      // Left & right cylindrical wooden block turrets
+      for (const side of [-1, 1]) {
+        const tx = side * w * 0.42;
+        ctx.fillStyle = '#f2cc8f';
+        ctx.beginPath();
+        ctx.roundRect(tx - w * 0.16, -d * 0.3 - h * 0.92, w * 0.32, d * 0.8 + h * 0.92, 10);
+        ctx.fill();
+        ctx.stroke();
+        // Cone turret roof
+        ctx.fillStyle = side < 0 ? '#ef5b5b' : '#52b874';
+        ctx.beginPath();
+        ctx.moveTo(tx, -d * 0.3 - h * 1.36);
+        ctx.lineTo(tx + w * 0.2, -d * 0.3 - h * 0.88);
+        ctx.lineTo(tx - w * 0.2, -d * 0.3 - h * 0.88);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+      // Tall center keep + bright blue roof & golden pennant flag
+      ctx.fillStyle = '#fff0cc';
+      ctx.beginPath();
+      ctx.roundRect(-w * 0.22, -d * 0.35 - h * 1.05, w * 0.44, h * 0.52 + d * 0.25, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(0, -d * 0.35 - h * 1.54);
+      ctx.lineTo(w * 0.26, -d * 0.35 - h * 1.02);
+      ctx.lineTo(-w * 0.26, -d * 0.35 - h * 1.02);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Fluttering golden flag on top!
+      ctx.strokeStyle = '#6b4d35';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, -d * 0.35 - h * 1.54);
+      ctx.lineTo(0, -d * 0.35 - h * 1.76);
+      ctx.stroke();
+      ctx.fillStyle = '#ffd447';
+      ctx.beginPath();
+      ctx.moveTo(0, -d * 0.35 - h * 1.76);
+      ctx.lineTo(24, -d * 0.35 - h * 1.68);
+      ctx.lineTo(0, -d * 0.35 - h * 1.6);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
   }
 
   ctx.restore();
@@ -1352,7 +2181,14 @@ export function renderGame(ctx, state, width, height, pointerGuide = null) {
   ctx.clearRect(0, 0, width, height);
 
   // Outer backdrop matching the active map
-  ctx.fillStyle = state.town.mapId === 'mars' ? '#bd6646' : state.town.mapId === 'metro' ? '#b8c1cc' : '#b4d8a5';
+  ctx.fillStyle =
+    state.town.mapId === 'playroom'
+      ? '#d4b083'
+      : state.town.mapId === 'mars'
+        ? '#bd6646'
+        : state.town.mapId === 'metro'
+          ? '#b8c1cc'
+          : '#b4d8a5';
   ctx.fillRect(0, 0, width, height);
 
   const cam = state.camera;

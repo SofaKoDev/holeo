@@ -2,6 +2,7 @@ let ctx = null;
 let lastPersonSfxAt = 0;
 let lastHonkAt = 0;
 let lastBellAt = 0;
+let lastSqueakAt = 0;
 let wilhelmBuffer = null;
 let wilhelmLoading = false;
 
@@ -316,6 +317,37 @@ export function playSciFiHonk(shape = 'hoverCar', enabled = true, roll = Math.ra
     lfo.start(now);
     osc.stop(now + dur + 0.02);
     lfo.stop(now + dur + 0.02);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function playToySqueak(enabled = true) {
+  if (!enabled) return false;
+  try {
+    const ac = getContext();
+    if (!ac) return false;
+    const now = ac.currentTime;
+    if (now - lastSqueakAt < 0.18) return false;
+    lastSqueakAt = now;
+
+    // Cute rubber-duck / plushie squeak!
+    const pitch = 0.92 + Math.random() * 0.22;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(780 * pitch, now);
+    osc.frequency.exponentialRampToValueAtTime(1420 * pitch, now + 0.065);
+    osc.frequency.exponentialRampToValueAtTime(920 * pitch, now + 0.15);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.09, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+
+    osc.connect(gain).connect(ac.destination);
+    osc.start(now);
+    osc.stop(now + 0.17);
     return true;
   } catch {
     return false;
