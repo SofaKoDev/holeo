@@ -233,7 +233,7 @@ function updateWanderer(prop, state, dt) {
 }
 
 export function stepGame(state, dt, inputX = 0, inputY = 0) {
-  if (state.phase !== 'playing') return { swallowed: [], leveledUp: null };
+  if (state.phase !== 'playing') return { captured: [], swallowed: [], leveledUp: null };
   const clampedDt = Math.min(Math.max(dt, 0), 0.05);
   state.elapsed += clampedDt;
 
@@ -242,7 +242,7 @@ export function stepGame(state, dt, inputX = 0, inputY = 0) {
     if (state.timeLeft === 0) {
       state.phase = 'finished';
       state.finishedReason = 'time';
-      return { swallowed: [], leveledUp: null };
+      return { captured: [], swallowed: [], leveledUp: null };
     }
   }
 
@@ -263,6 +263,7 @@ export function stepGame(state, dt, inputX = 0, inputY = 0) {
   hole.x = Math.max(-limit, Math.min(limit, hole.x + hole.vx * clampedDt));
   hole.y = Math.max(-limit, Math.min(limit, hole.y + hole.vy * clampedDt));
 
+  const capturedNow = [];
   const swallowedNow = [];
   let leveledUp = null;
 
@@ -357,6 +358,7 @@ export function stepGame(state, dt, inputX = 0, inputY = 0) {
       prop.vy = prop.vy * 0.65 + dy * invDist * tipSpeed;
       prop.tiltAngle = Math.atan2(dy, dx);
       prop.spinVel = (state.rand() < 0.5 ? -1 : 1) * (2.6 + state.rand() * 3.0) / Math.sqrt(prop.tier);
+      capturedNow.push(prop);
     } else if (fits && dist < rimDist) {
       // Rim tipping: prop leans toward the hole and begins sliding over the edge
       const edgeFactor = 1 - Math.max(0, dist - captureDist) / Math.max(1, rimDist - captureDist);
@@ -397,5 +399,5 @@ export function stepGame(state, dt, inputX = 0, inputY = 0) {
     state.finishedReason = 'cleared';
   }
 
-  return { swallowed: swallowedNow, leveledUp };
+  return { captured: capturedNow, swallowed: swallowedNow, leveledUp };
 }
