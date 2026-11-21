@@ -140,6 +140,7 @@ body,
   display: grid;
   place-items: center;
   padding: 20px;
+  overflow-y: auto;
   background: rgba(25, 36, 44, 0.42);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
@@ -275,7 +276,8 @@ body,
   gap: 12px;
 }
 
-.card button {
+.card button,
+.card a.btn-ghost {
   width: 100%;
   min-height: 54px;
   padding: 12px 18px;
@@ -288,7 +290,15 @@ body,
   transition: transform 0.14s ease, box-shadow 0.14s ease;
 }
 
-.card button:active {
+.card a.btn-ghost {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.card button:active,
+.card a.btn-ghost:active {
   transform: translateY(3px) scale(0.98);
 }
 
