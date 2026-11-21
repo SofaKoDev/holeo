@@ -1,0 +1,272 @@
+:root {
+  font-family: ui-rounded, 'SF Pro Rounded', 'Trebuchet MS', system-ui, sans-serif;
+  color: #25343b;
+  background: #b4d8a5;
+  font-synthesis: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app,
+.holeo-app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.holeo-app {
+  position: relative;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+#game-canvas:active {
+  cursor: grabbing;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.hud {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hud-pill {
+  pointer-events: auto;
+  background: rgba(255, 252, 245, 0.92);
+  border: 2px solid rgba(255, 255, 255, 0.96);
+  border-radius: 18px;
+  padding: 6px 14px;
+  box-shadow: 0 4px 0 rgba(48, 66, 56, 0.16), 0 10px 22px rgba(28, 42, 34, 0.12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.hud-pill small {
+  display: block;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #6b7d75;
+}
+
+.hud-pill strong {
+  display: block;
+  font-size: 16px;
+  color: #213238;
+}
+
+.hud-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.hud-actions button {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  background: rgba(255, 252, 245, 0.92);
+  font-size: 19px;
+  cursor: pointer;
+  box-shadow: 0 4px 0 rgba(48, 66, 56, 0.16);
+}
+
+.milestone-banner {
+  position: fixed;
+  top: calc(max(12px, env(safe-area-inset-top)) + 68px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  padding: 9px 22px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe07d 0%, #f5b942 100%);
+  color: #3d2808;
+  font-size: 17px;
+  font-weight: 900;
+  box-shadow: 0 5px 0 #c98c24, 0 12px 24px rgba(32, 24, 8, 0.25);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(25, 36, 44, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  padding: 28px 26px 24px;
+  border-radius: 30px;
+  background: linear-gradient(180deg, #fffdf8 0%, #f8efe0 100%);
+  border: 3px solid #ffffff;
+  text-align: center;
+  box-shadow: 0 12px 0 rgba(36, 48, 42, 0.2), 0 24px 50px rgba(18, 28, 34, 0.32);
+}
+
+.card.compact {
+  max-width: 360px;
+}
+
+.logo-hole {
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 42% 38%, #070912 0%, #171e32 68%, #2d3854 100%);
+  border: 6px solid #f5c65c;
+  box-shadow: 0 6px 0 #d9a43b, 0 12px 24px rgba(24, 30, 48, 0.24);
+  display: grid;
+  place-items: center;
+}
+
+.logo-hole span {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.16);
+}
+
+.kicker {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2.4px;
+  color: #6d7f76;
+}
+
+.card h1 {
+  font-family: 'Chalkboard SE', 'Comic Sans MS', ui-rounded, 'SF Pro Rounded', 'Trebuchet MS', system-ui, sans-serif;
+  margin: 0 0 10px;
+  font-size: 52px;
+  line-height: 1;
+  color: #1f3038;
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 30px;
+  color: #1f3038;
+}
+
+.subtitle {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #5b6d68;
+}
+
+.big-score {
+  display: block;
+  font-size: 46px;
+  color: #cf8028;
+  margin: 4px 0 8px;
+}
+
+.mode-buttons,
+.stack-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card button {
+  width: 100%;
+  min-height: 54px;
+  padding: 12px 18px;
+  border-radius: 18px;
+  border: 0;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.card button:active {
+  transform: translateY(3px) scale(0.98);
+}
+
+.card button strong {
+  display: block;
+  font-size: 18px;
+}
+
+.card button small {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.88;
+  margin-top: 2px;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #4b9c7e 0%, #368065 100%);
+  color: #ffffff;
+  box-shadow: 0 5px 0 #235c47, 0 10px 20px rgba(54, 128, 101, 0.28);
+}
+
+.btn-secondary {
+  background: linear-gradient(180deg, #f5a451 0%, #e08334 100%);
+  color: #ffffff;
+  box-shadow: 0 5px 0 #b0601c, 0 10px 20px rgba(224, 131, 52, 0.24);
+}
+
+.btn-ghost {
+  background: #f2e8d5;
+  color: #52473b;
+  box-shadow: 0 4px 0 #d8cab2;
+}
+
+.controls-hint {
+  margin: 16px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7b8a82;
+}
+
+@media (max-width: 560px) {
+  .hud-pill {
+    padding: 5px 10px;
+  }
+  .hud-pill strong {
+    font-size: 13px;
+  }
+  .hud-actions button {
+    width: 42px;
+    height: 42px;
+  }
+}
