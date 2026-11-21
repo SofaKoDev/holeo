@@ -147,4 +147,28 @@ describe('Holeo engine', () => {
     const step = stepGame(game, 0.04, 0, 0);
     expect(step.captured).toContain(person);
   });
+
+  it('generates Metro City with taller towers and street-riding cyclists', () => {
+    const game = createGame({ mode: 'sandbox', mapId: 'metro', seed: 42 });
+    startGame(game);
+    expect(game.town.mapId).toBe('metro');
+    expect(game.town.props.some((p) => p.shape === 'metroSpire')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'wedgeTower')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'glassTower')).toBe(true);
+
+    const cyclists = game.town.props.filter((p) => p.shape === 'cyclist');
+    expect(cyclists.length).toBeGreaterThan(8);
+    const startPos = cyclists.map((c) => ({ x: c.x, y: c.y }));
+
+    for (let i = 0; i < 100; i++) stepGame(game, 0.04, 0, 0);
+
+    let moved = 0;
+    for (let i = 0; i < cyclists.length; i++) {
+      const c = cyclists[i];
+      if (Math.hypot(c.x - startPos[i].x, c.y - startPos[i].y) > 5) moved++;
+      const onStreet = game.town.roads.some((r) => Math.abs(c.x - r) <= 56 || Math.abs(c.y - r) <= 56);
+      expect(onStreet).toBe(true);
+    }
+    expect(moved).toBeGreaterThan(cyclists.length * 0.7);
+  });
 });

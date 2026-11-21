@@ -1,24 +1,28 @@
 import './styles.css';
-import { TIERS, tierForRadius, tierProgressForRadius } from './catalog.js';
+import { MAPS, TIERS, tierForRadius, tierProgressForRadius } from './catalog.js';
 import { createGame, startGame, togglePause, stepGame } from './engine.js';
 import { renderGame } from './render.js';
-import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk } from './audio.js';
+import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk, playBikeBell } from './audio.js';
 
-const BEST_KEY = 'holeo-arcade-best-v1';
+const BEST_KEY_PREFIX = 'holeo-arcade-best-v1';
 const $ = (sel) => document.querySelector(sel);
 
-function readBest() {
+function bestKeyFor(mapId) {
+  return mapId === 'town' ? BEST_KEY_PREFIX : `${BEST_KEY_PREFIX}-${mapId}`;
+}
+
+function readBest(mapId = 'town') {
   try {
-    const val = Number(localStorage.getItem(BEST_KEY));
+    const val = Number(localStorage.getItem(bestKeyFor(mapId)));
     return Number.isFinite(val) && val > 0 ? val : 0;
   } catch {
     return 0;
   }
 }
 
-function writeBest(score) {
+function writeBest(score, mapId = 'town') {
   try {
-    localStorage.setItem(BEST_KEY, String(score));
+    localStorage.setItem(bestKeyFor(mapId), String(score));
   } catch {
     // Ignore storage failures
   }
@@ -55,7 +59,19 @@ document.querySelector('#app').innerHTML = `
         <div class="logo-hole" aria-hidden="true"><span></span></div>
         <p class="kicker">SWALLOW THE WHOLE TOWN</p>
         <h1>Holeo</h1>
-        <p class="subtitle">Start small with traffic cones &amp; flowers, then grow huge enough to gulp cars, trees, houses, and skyscrapers!</p>
+        <p class="subtitle">Start small, grow huge, and swallow everything in sight!</p>
+        <div class="map-picker" id="map-picker" role="radiogroup" aria-label="Choose a map">
+          ${MAPS.map(
+            (m, i) => `
+            <button type="button" class="map-chip${i === 0 ? ' active' : ''}" data-map="${m.id}" role="radio" aria-checked="${i === 0}">
+              <span class="map-badge" aria-hidden="true">${m.badge}</span>
+              <span class="map-copy">
+                <strong>${m.name}</strong>
+                <small>${m.subtitle}</small>
+              </span>
+            </button>`,
+          ).join('')}
+        </div>
         <div class="mode-buttons">
           <button id="play-sandbox" class="btn-primary" type="button">
             <strong>Relaxed Sandbox</strong>
@@ -100,7 +116,8 @@ document.querySelector('#app').innerHTML = `
 const canvas = $('#game-canvas');
 const ctx = canvas.getContext('2d');
 
-let state = createGame({ mode: 'sandbox' });
+let selectedMapId = MAPS[0].id;
+let state = createGame({ mode: 'sandbox', mapId: selectedMapId });
 let soundEnabled = true;
 let width = window.innerWidth;
 let height = window.innerHeight;
@@ -196,7 +213,7 @@ function formatTime(sec) {
 }
 
 function syncUi() {
-  const best = readBest();
+  const best = readBest(selectedMapId);
   $('#arcade-best-label').textContent = best ? `Best score: ${best.toLocaleString()}` : '2 minutes · High score chase';
 
   $('#hud').hidden = state.phase === 'ready';
@@ -215,7 +232,7 @@ function syncUi() {
     $('#hud-mid-val').textContent = formatTime(state.timeLeft);
   } else {
     const pct = Math.min(100, Math.round((state.swallowedCount / state.totalProps) * 100));
-    $('#hud-mid-label').textContent = 'TOWN';
+    $('#hud-mid-label').textContent = state.mapId === 'metro' ? 'CITY' : 'TOWN';
     $('#hud-mid-val').textContent = `${pct}%`;
   }
 
@@ -228,13 +245,14 @@ function syncUi() {
 
   if (state.phase === 'finished') {
     let newBest = false;
-    if (state.mode === 'arcade' && state.score > readBest()) {
-      writeBest(state.score);
+    if (state.mode === 'arcade' && state.score > readBest(state.mapId)) {
+      writeBest(state.score, state.mapId);
       newBest = true;
     }
     const pct = Math.round((state.swallowedCount / state.totalProps) * 100);
+    const mapMeta = MAPS.find((m) => m.id === state.mapId) || MAPS[0];
     $('#finish-kicker').textContent = newBest ? 'NEW HIGH SCORE!' : state.finishedReason === 'cleared' ? '100% CLEARED!' : 'TIME IS UP!';
-    $('#finish-title').textContent = state.finishedReason === 'cleared' ? 'You Swallowed the Whole Town!' : 'What a Giant Hole!';
+    $('#finish-title').textContent = state.finishedReason === 'cleared' ? `You Swallowed ${mapMeta.name}!` : 'What a Giant Hole!';
     $('#finish-score').textContent = state.score.toLocaleString();
     $('#finish-summary').textContent = `Swallowed ${state.swallowedCount} of ${state.totalProps} items (${pct}%) · Reached Lv.${tier.level} (${tier.label})`;
   }
@@ -271,6 +289,8 @@ function loop(now) {
     for (const prop of captured) {
       if (prop.shape === 'car' || prop.shape === 'truck' || prop.shape === 'bus') {
         playVehicleHonk(prop.shape, soundEnabled);
+      } else if (prop.shape === 'cyclist') {
+        playBikeBell(soundEnabled);
       }
     }
     if (swallowed.length) playSwallow(swallowed[swallowed.length - 1].tier, soundEnabled);
@@ -288,11 +308,27 @@ function loop(now) {
 }
 
 function begin(mode) {
-  state = createGame({ mode, seed: Math.floor(Math.random() * 1_000_000) });
+  state = createGame({ mode, mapId: selectedMapId, seed: Math.floor(Math.random() * 1_000_000) });
   startGame(state);
   pointer.active = false;
   syncUi();
   scheduleLoop();
+}
+
+for (const btn of document.querySelectorAll('#map-picker .map-chip')) {
+  btn.onclick = () => {
+    selectedMapId = btn.dataset.map;
+    for (const el of document.querySelectorAll('#map-picker .map-chip')) {
+      const active = el.dataset.map === selectedMapId;
+      el.classList.toggle('active', active);
+      el.setAttribute('aria-checked', String(active));
+    }
+    if (state.phase === 'ready') {
+      state = createGame({ mode: state.mode, mapId: selectedMapId });
+      syncUi();
+      renderGame(ctx, state, width, height, pointer);
+    }
+  };
 }
 
 $('#play-sandbox').onclick = () => begin('sandbox');
@@ -312,7 +348,7 @@ $('#btn-restart-pause').onclick = () => begin(state.mode);
 $('#btn-play-again').onclick = () => begin(state.mode);
 $('#btn-menu-pause').onclick = $('#btn-menu-finish').onclick = () => {
   stopLoop();
-  state = createGame({ mode: state.mode });
+  state = createGame({ mode: state.mode, mapId: selectedMapId });
   syncUi();
   renderGame(ctx, state, width, height, pointer);
 };

@@ -1,3 +1,8 @@
+export const MAPS = [
+  { id: 'town', name: 'Cozy Town', subtitle: 'Park plaza, cottages & avenues', badge: '🏡' },
+  { id: 'metro', name: 'Metro City', subtitle: 'Yellow cabs, cyclists & mega-towers', badge: '🏙️' },
+];
+
 export const TIERS = [
   { level: 1, minRadius: 20, label: 'Tiny Treasures' },
   { level: 2, minRadius: 26, label: 'Sidewalk Gear' },
@@ -20,12 +25,16 @@ export const PROPS = {
   hydrant: { name: 'Fire Hydrant', tier: 1, radius: 12, height: 16, mass: 16, points: 15, shape: 'hydrant', color: '#e65564', accent: '#ffd269' },
   bollard: { name: 'Sidewalk Post', tier: 1, radius: 11, height: 15, mass: 14, points: 12, shape: 'cylinder', color: '#7a8ea3', accent: '#ffe184' },
   person: { name: 'Townsperson', tier: 1, radius: 12, height: 22, mass: 16, points: 18, shape: 'person', color: '#5c8fd6', accent: '#f2c14e', motion: 'wander' },
+  newsstand: { name: 'Newspaper Box', tier: 1, radius: 13, height: 18, mass: 18, points: 18, shape: 'newsstand', color: '#3b73b5', accent: '#f7f4eb' },
 
   // Tier 2: Small (radius 18-26)
   trashcan: { name: 'Trash Can', tier: 2, radius: 19, height: 22, mass: 34, points: 25, shape: 'cylinder', color: '#589e8c', accent: '#3d7567' },
   mailbox: { name: 'Mailbox', tier: 2, radius: 18, height: 26, mass: 32, points: 25, shape: 'box', color: '#4d82b8', accent: '#e85868' },
   bench: { name: 'Park Bench', tier: 2, radius: 24, height: 16, mass: 48, points: 35, shape: 'bench', color: '#c4834f', accent: '#546473' },
   lamp: { name: 'Street Lamp', tier: 2, radius: 20, height: 42, mass: 42, points: 30, shape: 'lamp', color: '#4f6275', accent: '#ffe896' },
+  cyclist: { name: 'City Cyclist', tier: 2, radius: 18, height: 22, mass: 36, points: 40, shape: 'cyclist', color: '#e65c5c', accent: '#2c3e50', motion: 'road' },
+  subwaySign: { name: 'Subway Entrance', tier: 2, radius: 20, height: 36, mass: 42, points: 35, shape: 'subwaySign', color: '#334454', accent: '#48c479' },
+  hotdogCart: { name: 'Hot Dog Cart', tier: 2, radius: 22, height: 28, mass: 48, points: 45, shape: 'hotdogCart', color: '#d8dfe6', accent: '#e65555' },
 
   // Tier 3: Medium (radius 30-42)
   bush: { name: 'Round Bush', tier: 3, radius: 30, height: 22, mass: 85, points: 50, shape: 'bush', color: '#5cb370', accent: '#80d48f' },
@@ -43,14 +52,19 @@ export const PROPS = {
   cottage: { name: 'Cozy Cottage', tier: 5, radius: 76, height: 62, mass: 760, points: 320, shape: 'house', color: '#fff4df', accent: '#e06c65' },
   cafe: { name: 'Corner Cafe', tier: 5, radius: 84, height: 66, mass: 920, points: 380, shape: 'house', color: '#f9e3cf', accent: '#4d9c8a' },
   houseBlue: { name: 'Blue House', tier: 5, radius: 90, height: 72, mass: 1080, points: 420, shape: 'house', color: '#dcecf7', accent: '#5482b3' },
+  brownstone: { name: 'Brownstone', tier: 5, radius: 86, height: 96, mass: 1020, points: 430, shape: 'brownstone', color: '#b86b52', accent: '#7a4536' },
 
   // Tier 6: Giant (radius 112-136)
   apartments: { name: 'Apartments', tier: 6, radius: 118, height: 115, mass: 2100, points: 750, shape: 'tower', color: '#f2d0b6', accent: '#d98a6c' },
   office: { name: 'City Office', tier: 6, radius: 130, height: 135, mass: 2600, points: 900, shape: 'tower', color: '#c4d9e8', accent: '#5f8eb0' },
+  waterTowerBlock: { name: 'High-Rise Block', tier: 6, radius: 124, height: 165, mass: 2400, points: 860, shape: 'waterTowerBlock', color: '#cf9b82', accent: '#8c5f4d' },
 
   // Tier 7: Colossal (radius 158-185)
   skyscraper: { name: 'Skyscraper', tier: 7, radius: 162, height: 195, mass: 4600, points: 1600, shape: 'skyscraper', color: '#9ec4de', accent: '#49799e' },
   cityHall: { name: 'Grand City Hall', tier: 7, radius: 182, height: 175, mass: 6200, points: 2500, shape: 'cityHall', color: '#f7ebd4', accent: '#f2c14e' },
+  glassTower: { name: 'Glass Skyscraper', tier: 7, radius: 158, height: 245, mass: 4700, points: 1650, shape: 'glassTower', color: '#8ac5e3', accent: '#3e7396' },
+  wedgeTower: { name: 'Flatiron Tower', tier: 7, radius: 168, height: 270, mass: 5400, points: 2000, shape: 'wedgeTower', color: '#e6d7bd', accent: '#b8a382' },
+  metroSpire: { name: 'Empire Spire', tier: 7, radius: 184, height: 320, mass: 6900, points: 2800, shape: 'metroSpire', color: '#d4dce6', accent: '#687f96' },
 };
 
 export function tierForRadius(radius) {
