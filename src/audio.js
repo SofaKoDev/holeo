@@ -278,6 +278,50 @@ export function playBikeBell(enabled = true) {
   }
 }
 
+export function playSciFiHonk(shape = 'hoverCar', enabled = true, roll = Math.random()) {
+  if (!enabled || !shouldPlayVehicleHonk(roll)) return false;
+  try {
+    const ac = getContext();
+    if (!ac) return false;
+    const now = ac.currentTime;
+    if (now - lastHonkAt < 0.25) return false;
+    lastHonkAt = now;
+
+    // Playful retro sci-fi UFO warble / laser-horn that droops as it falls
+    const isHeavy = shape === 'marsRover' || shape === 'hoverHauler';
+    const isScooter = shape === 'hoverScooter';
+    const base = isScooter ? 760 : isHeavy ? 260 : 520;
+    const dur = isScooter ? 0.17 : isHeavy ? 0.28 : 0.24;
+
+    const osc = ac.createOscillator();
+    const lfo = ac.createOscillator();
+    const lfoGain = ac.createGain();
+    const gain = ac.createGain();
+
+    osc.type = isHeavy ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(base, now);
+    osc.frequency.exponentialRampToValueAtTime(base * 0.62, now + dur);
+
+    lfo.type = 'sine';
+    lfo.frequency.value = isScooter ? 26 : 18;
+    lfoGain.gain.value = isHeavy ? 24 : 58;
+    lfo.connect(lfoGain).connect(osc.frequency);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    osc.connect(gain).connect(ac.destination);
+    osc.start(now);
+    lfo.start(now);
+    osc.stop(now + dur + 0.02);
+    lfo.stop(now + dur + 0.02);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function playLevelUp(enabled = true) {
   if (!enabled) return;
   try {

@@ -2,7 +2,7 @@ import './styles.css';
 import { MAPS, TIERS, tierForRadius, tierProgressForRadius } from './catalog.js';
 import { createGame, startGame, togglePause, stepGame } from './engine.js';
 import { renderGame } from './render.js';
-import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk, playBikeBell } from './audio.js';
+import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk, playBikeBell, playSciFiHonk } from './audio.js';
 
 const BEST_KEY_PREFIX = 'holeo-arcade-best-v1';
 const $ = (sel) => document.querySelector(sel);
@@ -232,7 +232,7 @@ function syncUi() {
     $('#hud-mid-val').textContent = formatTime(state.timeLeft);
   } else {
     const pct = Math.min(100, Math.round((state.swallowedCount / state.totalProps) * 100));
-    $('#hud-mid-label').textContent = state.mapId === 'metro' ? 'CITY' : 'TOWN';
+    $('#hud-mid-label').textContent = state.mapId === 'metro' ? 'CITY' : state.mapId === 'mars' ? 'MARS' : 'TOWN';
     $('#hud-mid-val').textContent = `${pct}%`;
   }
 
@@ -278,9 +278,10 @@ function loop(now) {
   if (state.phase === 'playing') {
     const [ix, iy] = getInputVector();
     const { captured, swallowed, leveledUp } = stepGame(state, dt, ix, iy);
-    const capturedPeople = captured.filter((p) => p.shape === 'person');
+    const isLivingWalker = (p) => p.shape === 'person' || p.shape === 'alien';
+    const capturedPeople = captured.filter(isLivingWalker);
     const anyStandingPersonLeft = capturedPeople.length > 0 && state.town.props.some(
-      (p) => p.shape === 'person' && !p.swallowing && !p.swallowed,
+      (p) => isLivingWalker(p) && !p.swallowing && !p.swallowed,
     );
     capturedPeople.forEach((p, idx) => {
       const isLastPerson = !anyStandingPersonLeft && idx === capturedPeople.length - 1;
@@ -291,6 +292,14 @@ function loop(now) {
         playVehicleHonk(prop.shape, soundEnabled);
       } else if (prop.shape === 'cyclist') {
         playBikeBell(soundEnabled);
+      } else if (
+        prop.shape === 'hoverCar' ||
+        prop.shape === 'saucerCar' ||
+        prop.shape === 'marsRover' ||
+        prop.shape === 'hoverHauler' ||
+        prop.shape === 'hoverScooter'
+      ) {
+        playSciFiHonk(prop.shape, soundEnabled);
       }
     }
     if (swallowed.length) playSwallow(swallowed[swallowed.length - 1].tier, soundEnabled);

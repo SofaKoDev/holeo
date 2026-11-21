@@ -1,17 +1,57 @@
 function drawTownGround(ctx, town) {
   const half = town.halfSize;
   const isMetro = town.mapId === 'metro';
+  const isMars = town.mapId === 'mars';
 
-  // Base terrain: sunlit grass for Cozy Town, urban concrete blocks for Metro City
-  ctx.fillStyle = isMetro ? '#cfd5dc' : '#c5e2b5';
+  // Base terrain: sunlit grass for Cozy Town, urban concrete for Metro City, red desert for Mars
+  ctx.fillStyle = isMars ? '#d47a57' : isMetro ? '#cfd5dc' : '#c5e2b5';
   ctx.fillRect(-half, -half, half * 2, half * 2);
 
-  // Outer town border
-  ctx.strokeStyle = isMetro ? '#8f9aa8' : '#9ec78e';
+  // Outer border
+  ctx.strokeStyle = isMars ? '#a8573b' : isMetro ? '#8f9aa8' : '#9ec78e';
   ctx.lineWidth = 28;
   ctx.strokeRect(-half, -half, half * 2, half * 2);
 
-  if (isMetro) {
+  if (isMars) {
+    // Martian craters scattered across the red desert
+    if (town.craters) {
+      for (const c of town.craters) {
+        ctx.fillStyle = 'rgba(138, 62, 38, 0.28)';
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(232, 148, 108, 0.25)';
+        ctx.beginPath();
+        ctx.arc(c.x + c.r * 0.14, c.y + c.r * 0.14, c.r * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // Central Martian Landing Pad Plaza at (0, 0)
+    ctx.fillStyle = '#536073';
+    ctx.beginPath();
+    ctx.roundRect(-195, -195, 390, 390, 48);
+    ctx.fill();
+    ctx.fillStyle = '#68778c';
+    ctx.beginPath();
+    ctx.roundRect(-170, -170, 340, 340, 36);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(94, 240, 255, 0.45)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 118, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#475466';
+    ctx.beginPath();
+    ctx.arc(0, 0, 56, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#f2c14e';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([14, 10]);
+    ctx.beginPath();
+    ctx.arc(0, 0, 62, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else if (isMetro) {
     // Central Park green oasis in the heart of Metro City
     ctx.fillStyle = '#e5e0d4';
     ctx.beginPath();
@@ -56,23 +96,23 @@ function drawTownGround(ctx, town) {
     ctx.fill();
   }
 
-  // Paved sidewalks & avenues
-  const roadW = isMetro ? 116 : 104;
-  const sideW = isMetro ? 148 : 132;
-  ctx.fillStyle = isMetro ? '#e3e6ea' : '#eee3ce';
+  // Paved sidewalks & avenues / Martian hover-highways
+  const roadW = isMetro || isMars ? 116 : 104;
+  const sideW = isMetro || isMars ? 148 : 132;
+  ctx.fillStyle = isMars ? '#8c6252' : isMetro ? '#e3e6ea' : '#eee3ce';
   for (const r of town.roads) {
     ctx.fillRect(-half, r - sideW / 2, half * 2, sideW);
     ctx.fillRect(r - sideW / 2, -half, sideW, half * 2);
   }
-  ctx.fillStyle = isMetro ? '#4a5566' : '#626f82';
+  ctx.fillStyle = isMars ? '#364354' : isMetro ? '#4a5566' : '#626f82';
   for (const r of town.roads) {
     ctx.fillRect(-half, r - roadW / 2, half * 2, roadW);
     ctx.fillRect(r - roadW / 2, -half, roadW, half * 2);
   }
 
-  // Painted green bike lanes along outer edges of Metro City avenues
-  if (isMetro) {
-    ctx.fillStyle = 'rgba(72, 180, 118, 0.36)';
+  // Outer bike lanes (Metro) or glowing cyan hover-scooter lanes (Mars)
+  if (isMetro || isMars) {
+    ctx.fillStyle = isMars ? 'rgba(94, 240, 255, 0.22)' : 'rgba(72, 180, 118, 0.36)';
     for (const r of town.roads) {
       ctx.fillRect(-half, r - 50, half * 2, 14);
       ctx.fillRect(-half, r + 36, half * 2, 14);
@@ -81,9 +121,21 @@ function drawTownGround(ctx, town) {
     }
   }
 
-  // Center lane lines (double yellow for Metro City, dashed cream for Cozy Town)
+  // Center lane lines
   ctx.save();
-  if (isMetro) {
+  if (isMars) {
+    ctx.strokeStyle = 'rgba(94, 240, 255, 0.78)';
+    ctx.lineWidth = 3.5;
+    ctx.setLineDash([28, 18]);
+    for (const r of town.roads) {
+      ctx.beginPath();
+      ctx.moveTo(-half + 30, r);
+      ctx.lineTo(half - 30, r);
+      ctx.moveTo(r, -half + 30);
+      ctx.lineTo(r, half - 30);
+      ctx.stroke();
+    }
+  } else if (isMetro) {
     ctx.strokeStyle = 'rgba(247, 206, 82, 0.85)';
     ctx.lineWidth = 3;
     for (const r of town.roads) {
@@ -111,13 +163,13 @@ function drawTownGround(ctx, town) {
   }
   ctx.restore();
 
-  // Intersections & crosswalk stripes
-  const roadColor = isMetro ? '#4a5566' : '#626f82';
+  // Intersections & crosswalks / glowing hover-pads
+  const roadColor = isMars ? '#364354' : isMetro ? '#4a5566' : '#626f82';
   ctx.fillStyle = roadColor;
   for (const rx of town.roads) {
     for (const ry of town.roads) {
       ctx.fillRect(rx - roadW / 2, ry - roadW / 2, roadW, roadW);
-      ctx.fillStyle = 'rgba(255, 252, 242, 0.75)';
+      ctx.fillStyle = isMars ? 'rgba(94, 240, 255, 0.6)' : 'rgba(255, 252, 242, 0.75)';
       for (let s = -38; s <= 38; s += 19) {
         ctx.fillRect(rx + s - 4, ry - roadW / 2 - 14, 8, 12);
         ctx.fillRect(rx + s - 4, ry + roadW / 2 + 2, 8, 12);
@@ -187,14 +239,20 @@ function drawProp(ctx, p) {
 
   ctx.scale(s, s);
   if (p.swallowing) {
-    // Tumble rotation for non-oriented props (cars/cyclists/benches/people already use p.angle inside)
+    // Tumble rotation for non-oriented props (vehicles/cyclists/benches/people/aliens use p.angle inside)
     if (
       p.shape !== 'car' &&
       p.shape !== 'truck' &&
       p.shape !== 'bus' &&
       p.shape !== 'cyclist' &&
+      p.shape !== 'hoverCar' &&
+      p.shape !== 'saucerCar' &&
+      p.shape !== 'marsRover' &&
+      p.shape !== 'hoverHauler' &&
+      p.shape !== 'hoverScooter' &&
       p.shape !== 'bench' &&
-      p.shape !== 'person'
+      p.shape !== 'person' &&
+      p.shape !== 'alien'
     ) {
       ctx.rotate(p.angle * 0.55);
     }
@@ -846,6 +904,445 @@ function drawProp(ctx, p) {
       ctx.fill();
       break;
     }
+    case 'marsRock': {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.9, r * 0.45);
+      ctx.lineTo(-r * 0.55, -r * 0.72);
+      ctx.lineTo(r * 0.28, -r * 0.85);
+      ctx.lineTo(r * 0.92, -r * 0.1);
+      ctx.lineTo(r * 0.65, r * 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.45, -r * 0.55);
+      ctx.lineTo(r * 0.22, -r * 0.68);
+      ctx.lineTo(r * 0.48, -r * 0.12);
+      ctx.lineTo(-r * 0.15, r * 0.05);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'marsCrystal': {
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.55, r * 0.4);
+      ctx.lineTo(-r * 0.72, -h * 0.7);
+      ctx.lineTo(-r * 0.1, -h * 0.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.35, r * 0.5);
+      ctx.lineTo(0, -h * 1.1);
+      ctx.lineTo(r * 0.45, r * 0.45);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 1.05);
+      ctx.lineTo(-r * 0.16, r * 0.1);
+      ctx.lineTo(r * 0.08, r * 0.1);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'alien': {
+      const phase = p.wander ? p.wander.walkPhase : 0;
+      const moving = p.wander && (Math.abs(p.vx) > 2 || Math.abs(p.vy) > 2);
+      const bob = moving && !p.swallowing ? Math.abs(Math.sin(phase)) * 3.5 : 0;
+      const stride = moving && !p.swallowing ? Math.sin(phase) * 3.8 : 0;
+      ctx.save();
+      if (p.swallowing) ctx.rotate(p.angle);
+      // Little alien feet
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(-3.5, 4 + stride * 0.6, 2.7, 0, Math.PI * 2);
+      ctx.arc(3.5, 4 - stride * 0.6, 2.7, 0, Math.PI * 2);
+      ctx.fill();
+      // Sleek silver-white spacesuit torso
+      ctx.fillStyle = '#e8f0f5';
+      ctx.beginPath();
+      ctx.roundRect(-6, -7.5 - bob, 12, 12, 5);
+      ctx.fill();
+      ctx.fillStyle = '#5be9f5';
+      ctx.fillRect(-3.5, -4 - bob, 7, 3);
+      // Wiggling antennae
+      const wiggle = Math.sin(phase * 1.3) * 1.8;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(-3, -16 - bob);
+      ctx.lineTo(-5 + wiggle, -21 - bob);
+      ctx.moveTo(3, -16 - bob);
+      ctx.lineTo(5 + wiggle, -21 - bob);
+      ctx.stroke();
+      ctx.fillStyle = '#a8ff82';
+      ctx.beginPath();
+      ctx.arc(-5 + wiggle, -21.5 - bob, 2, 0, Math.PI * 2);
+      ctx.arc(5 + wiggle, -21.5 - bob, 2, 0, Math.PI * 2);
+      ctx.fill();
+      // Cute green alien head + big dark eyes
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.ellipse(0, -12.5 - bob, 6.4, 5.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#141c24';
+      ctx.beginPath();
+      ctx.ellipse(-2.6, -12.2 - bob, 1.9, 2.5, -0.25, 0, Math.PI * 2);
+      ctx.ellipse(2.6, -12.2 - bob, 1.9, 2.5, 0.25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'solarPanel': {
+      ctx.fillStyle = '#8b98a8';
+      ctx.fillRect(-3, -4, 6, 10);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.92, -h * 0.95, r * 1.84, r * 1.15, 4);
+      ctx.fill();
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 1.8;
+      ctx.strokeRect(-r * 0.84, -h * 0.88, r * 1.68, r * 1.0);
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 0.88);
+      ctx.lineTo(0, -h * 0.88 + r);
+      ctx.moveTo(-r * 0.84, -h * 0.88 + r * 0.5);
+      ctx.lineTo(r * 0.84, -h * 0.88 + r * 0.5);
+      ctx.stroke();
+      break;
+    }
+    case 'beacon': {
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, 5);
+      ctx.lineTo(0, -h * 1.1);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 107, 87, 0.32)';
+      ctx.beginPath();
+      ctx.arc(0, -h * 1.12, r * 0.78, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(0, -h * 1.12, r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'hoverScooter': {
+      ctx.save();
+      ctx.rotate(p.angle);
+      // Glowing cyan hover pads
+      ctx.fillStyle = 'rgba(91, 233, 245, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.55, 0, 6, 4.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(r * 0.55, 0, 6, 4.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Sleek hover-bike chassis
+      ctx.fillStyle = '#e2ebf2';
+      ctx.beginPath();
+      ctx.roundRect(-r * 0.82, -5.5, r * 1.64, 11, 5.5);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.fillRect(-r * 0.4, -2, r * 0.9, 4);
+      // Alien rider
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, 5.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#141c24';
+      ctx.beginPath();
+      ctx.arc(2.5, -2, 1.5, 0, Math.PI * 2);
+      ctx.arc(2.5, 2, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'marsPod': {
+      ctx.fillStyle = '#6e3ba6';
+      ctx.beginPath();
+      ctx.arc(0, 3, r * 0.92, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(-r * 0.24, -4, r * 0.64, 0, Math.PI * 2);
+      ctx.arc(r * 0.28, -3, r * 0.6, 0, Math.PI * 2);
+      ctx.arc(0, -r * 0.3, r * 0.66, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(-r * 0.16, -r * 0.35, r * 0.28, 0, Math.PI * 2);
+      ctx.arc(r * 0.22, -r * 0.12, r * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'hoverCar': {
+      ctx.save();
+      ctx.rotate(p.angle);
+      const len = r * 1.9;
+      const wid = r * 1.04;
+      // Glowing thruster exhaust
+      ctx.fillStyle = 'rgba(108, 242, 255, 0.55)';
+      ctx.beginPath();
+      ctx.ellipse(-len * 0.52, -wid * 0.22, 8, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(-len * 0.52, wid * 0.22, 8, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Sleek spaceship-car hull
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(len * 0.54, 0);
+      ctx.quadraticCurveTo(len * 0.42, -wid * 0.52, -len * 0.42, -wid * 0.46);
+      ctx.lineTo(-len * 0.48, wid * 0.46);
+      ctx.quadraticCurveTo(len * 0.42, wid * 0.52, len * 0.54, 0);
+      ctx.closePath();
+      ctx.fill();
+      // Glowing cyan cockpit canopy
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.ellipse(len * 0.06, 0, len * 0.24, wid * 0.26, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'saucerCar': {
+      ctx.save();
+      ctx.rotate(p.angle);
+      // Outer metallic saucer ring
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.92, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Ring lights
+      ctx.fillStyle = p.accent;
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * r * 0.68, Math.sin(a) * r * 0.68, 3.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // Translucent glass dome
+      ctx.fillStyle = '#8ef5ff';
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.44, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath();
+      ctx.arc(-r * 0.14, -r * 0.14, r * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'marsRover':
+    case 'hoverHauler': {
+      ctx.save();
+      ctx.rotate(p.angle);
+      const len = r * 2.0;
+      const wid = r * 0.98;
+      if (p.shape === 'marsRover') {
+        // 6 chunky Mars rover wheels
+        ctx.fillStyle = '#2d3745';
+        for (const wx of [-len * 0.38, -len * 0.05, len * 0.26]) {
+          ctx.fillRect(wx, -wid * 0.58, len * 0.16, wid * 1.16);
+        }
+      } else {
+        // Glowing hover-hauler underside glow
+        ctx.fillStyle = 'rgba(91, 233, 245, 0.45)';
+        ctx.beginPath();
+        ctx.roundRect(-len * 0.54, -wid * 0.54, len * 1.08, wid * 1.08, 12);
+        ctx.fill();
+      }
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-len / 2, -wid / 2, len, wid, 9);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.roundRect(len * 0.14, -wid * 0.38, len * 0.3, wid * 0.76, 6);
+      ctx.fill();
+      ctx.fillStyle = '#2b5d99';
+      ctx.fillRect(-len * 0.4, -wid * 0.34, len * 0.44, wid * 0.68);
+      ctx.restore();
+      break;
+    }
+    case 'crystalSpire': {
+      ctx.fillStyle = '#5346ba';
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.85, r * 0.35);
+      ctx.lineTo(-r * 0.35, -h * 0.88);
+      ctx.lineTo(r * 0.2, r * 0.35);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.45, r * 0.45);
+      ctx.lineTo(r * 0.1, -h * 1.12);
+      ctx.lineTo(r * 0.78, r * 0.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(r * 0.1, -h * 1.08);
+      ctx.lineTo(-r * 0.15, r * 0.15);
+      ctx.lineTo(r * 0.25, r * 0.2);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'habDome': {
+      // Metallic ring base
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 0.96, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Glass biodome interior with little green Martian greenhouse plants!
+      ctx.fillStyle = '#c8f2f5';
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.28, r * 0.82, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(-r * 0.22, -h * 0.24, r * 0.26, 0, Math.PI * 2);
+      ctx.arc(r * 0.2, -h * 0.18, r * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      // Geodesic glass ribs + shine
+      ctx.strokeStyle = 'rgba(255,255,255,0.62)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.28, r * 0.82, 0, Math.PI * 2);
+      ctx.moveTo(-r * 0.82, -h * 0.28);
+      ctx.lineTo(r * 0.82, -h * 0.28);
+      ctx.moveTo(0, -h * 0.28 - r * 0.82);
+      ctx.lineTo(0, -h * 0.28 + r * 0.82);
+      ctx.stroke();
+      break;
+    }
+    case 'radarDish': {
+      const w = r * 1.25;
+      const d = r * 1.15;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -d / 2 - h * 0.72, w, d + h * 0.72, 12);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Giant angled satellite dish on top
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.85, r * 0.56, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.85, r * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'colonyTower': {
+      const w = r * 1.42;
+      const d = r * 1.28;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -d / 2 - h, w, d + h, 14);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Glowing cyan viewport bands
+      ctx.fillStyle = p.accent;
+      for (let rr = 0; rr < 4; rr++) {
+        const y = -h * 0.78 + rr * (h * 0.24);
+        ctx.beginPath();
+        ctx.roundRect(-w * 0.38, y, w * 0.76, 12, 6);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#c8d6e3';
+      ctx.beginPath();
+      ctx.arc(0, -h - 4, r * 0.46, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'marsRocket': {
+      // Launchpad base
+      ctx.fillStyle = '#5c6b7a';
+      ctx.beginPath();
+      ctx.arc(0, 6, r * 0.88, 0, Math.PI * 2);
+      ctx.fill();
+      // Rocket fins
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.68, 12);
+      ctx.lineTo(-r * 0.35, -h * 0.45);
+      ctx.lineTo(-r * 0.2, 12);
+      ctx.moveTo(r * 0.68, 12);
+      ctx.lineTo(r * 0.35, -h * 0.45);
+      ctx.lineTo(r * 0.2, 12);
+      ctx.closePath();
+      ctx.fill();
+      // Tall white Starship fuselage
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 1.22);
+      ctx.quadraticCurveTo(r * 0.48, -h * 0.72, r * 0.38, 10);
+      ctx.lineTo(-r * 0.38, 10);
+      ctx.quadraticCurveTo(-r * 0.48, -h * 0.72, 0, -h * 1.22);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.16)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Red nosecone & cyan porthole
+      ctx.fillStyle = p.accent;
+      ctx.beginPath();
+      ctx.moveTo(0, -h * 1.22);
+      ctx.quadraticCurveTo(r * 0.3, -h * 0.94, r * 0.32, -h * 0.8);
+      ctx.lineTo(-r * 0.32, -h * 0.8);
+      ctx.quadraticCurveTo(-r * 0.3, -h * 0.94, 0, -h * 1.22);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#6cf2ff';
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.55, r * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'mothership': {
+      // Colossal UFO Mothership with glowing cyan rim lights!
+      ctx.fillStyle = '#6a7f96';
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.35, r * 1.0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.46, r * 0.88, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = p.accent;
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * r * 0.7, -h * 0.46 + Math.sin(a) * r * 0.7, 9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#c4fbff';
+      ctx.beginPath();
+      ctx.arc(0, -h * 0.54, r * 0.44, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath();
+      ctx.arc(-r * 0.14, -h * 0.62, r * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
   }
 
   ctx.restore();
@@ -855,7 +1352,7 @@ export function renderGame(ctx, state, width, height, pointerGuide = null) {
   ctx.clearRect(0, 0, width, height);
 
   // Outer backdrop matching the active map
-  ctx.fillStyle = state.town.mapId === 'metro' ? '#b8c1cc' : '#b4d8a5';
+  ctx.fillStyle = state.town.mapId === 'mars' ? '#bd6646' : state.town.mapId === 'metro' ? '#b8c1cc' : '#b4d8a5';
   ctx.fillRect(0, 0, width, height);
 
   const cam = state.camera;
