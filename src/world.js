@@ -19,6 +19,7 @@ export function makeRng(seed = 20261120) {
 
 export function createTown(seed = 20261120, mapId = 'town') {
   if (mapId === 'metro') return createMetroCity(seed);
+  if (mapId === 'mars') return createMarsColony(seed);
   const rand = makeRng(seed);
   const props = [];
   let nextId = 1;
@@ -450,4 +451,246 @@ function createMetroCity(seed = 20261120) {
   }
 
   return { mapId: 'metro', halfSize, roads, props };
+}
+
+function createMarsColony(seed = 20261120) {
+  const rand = makeRng((seed ^ 0x7c4b31e9) >>> 0);
+  const halfSize = WORLD_HALF;
+  const roads = [-760, -240, 240, 760];
+  const props = [];
+  let nextId = 1;
+
+  // Deterministic red-planet craters for ground texture
+  const craters = [];
+  for (let i = 0; i < 42; i++) {
+    const cx = (rand() * 2 - 1) * (halfSize - 120);
+    const cy = (rand() * 2 - 1) * (halfSize - 120);
+    if (Math.hypot(cx, cy) < 230) continue;
+    if (roads.some((r) => Math.abs(cx - r) < 85 || Math.abs(cy - r) < 85)) continue;
+    craters.push({ x: cx, y: cy, r: 22 + rand() * 48 });
+  }
+
+  const canPlace = (x, y, radius, pad = 10) => {
+    if (Math.abs(x) > halfSize - radius - 40 || Math.abs(y) > halfSize - radius - 40) return false;
+    if (Math.hypot(x, y) < radius + 34) return false;
+    for (const p of props) {
+      if (Math.hypot(x - p.x, y - p.y) < radius + p.radius + pad) return false;
+    }
+    return true;
+  };
+
+  const add = (type, x, y, angle = 0, extra = {}) => {
+    const def = PROPS[type];
+    if (!canPlace(x, y, def.radius)) return false;
+    props.push({
+      id: nextId++,
+      type,
+      ...def,
+      ...extra,
+      x,
+      y,
+      angle,
+      vx: 0,
+      vy: 0,
+      z: 0,
+      vz: 0,
+      tilt: 0,
+      tiltAngle: 0,
+      spinVel: 0,
+      swallowing: false,
+      swallowProgress: 0,
+      swallowed: false,
+      bump: 0,
+    });
+    return true;
+  };
+
+  const alienTints = ['#69db6e', '#7af298', '#52cf85', '#a6eb5c', '#5ce0c4'];
+  const makeAlienExtra = () => ({
+    color: alienTints[Math.floor(rand() * alienTints.length)],
+    accent: '#23593a',
+    wander: {
+      dir: rand() * Math.PI * 2,
+      speed: 26 + rand() * 18,
+      timer: 1.1 + rand() * 2.5,
+      pauseTimer: rand() < 0.2 ? 0.4 + rand() * 0.9 : 0,
+      walkPhase: rand() * Math.PI * 2,
+    },
+  });
+
+  // 1. Central Landing Pad starter ring around (0, 0)
+  const starterTiny = ['marsRock', 'marsCrystal'];
+  for (let i = 0; i < 34; i++) {
+    const a = (i / 34) * Math.PI * 2 + rand() * 0.25;
+    const dist = 58 + rand() * 185;
+    add(starterTiny[i % starterTiny.length], Math.cos(a) * dist, Math.sin(a) * dist, rand() * Math.PI * 2);
+  }
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + rand() * 0.4;
+    const dist = 68 + rand() * 140;
+    add('alien', Math.cos(a) * dist, Math.sin(a) * dist, rand() * Math.PI * 2, makeAlienExtra());
+  }
+  const starterSmall = ['solarPanel', 'beacon'];
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2 + rand() * 0.3;
+    const dist = 120 + rand() * 80;
+    add(starterSmall[i % starterSmall.length], Math.cos(a) * dist, Math.sin(a) * dist, a + Math.PI / 2);
+  }
+
+  // 2. Colossal Martian Landmarks (Tier 7) — placed before vehicles so landmarks always spawn
+  add('mothership', 0, -1080, 0);
+  add('marsRocket', -1060, -1060, 0);
+  add('marsRocket', 1060, -1060, 0);
+  add('marsRocket', -1060, 1060, 0);
+  add('marsRocket', 1060, 1060, 0);
+
+  // 3. Spaceship cars, mini UFOs, rovers & hover-haulers along the glowing hover-highways
+  const pickCraft = () => {
+    const r = rand();
+    if (r < 0.40) return 'hoverCar';
+    if (r < 0.72) return 'saucerCar';
+    if (r < 0.87) return 'marsRover';
+    return 'hoverHauler';
+  };
+  for (const roadY of roads) {
+    for (let x = -1200; x <= 1200; x += 180) {
+      if (roads.some((rx) => Math.abs(x - rx) < 110)) continue;
+      const lane = rand() < 0.5 ? -LANE_OFFSET : LANE_OFFSET;
+      const dir = lane > 0 ? 1 : -1;
+      const pick = pickCraft();
+      const isBig = pick === 'marsRover' || pick === 'hoverHauler';
+      const angle = dir > 0 ? 0 : Math.PI;
+      const speed = isBig ? 46 + rand() * 20 : 68 + rand() * 34;
+      add(pick, x + (rand() - 0.5) * 30, roadY + lane, angle, {
+        road: {
+          axis: 'x',
+          roadCoord: roadY,
+          laneOffset: lane,
+          laneWidth: LANE_OFFSET,
+          dir,
+          speed,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+  for (const roadX of roads) {
+    for (let y = -1200; y <= 1200; y += 190) {
+      if (roads.some((ry) => Math.abs(y - ry) < 110)) continue;
+      const lane = rand() < 0.5 ? -LANE_OFFSET : LANE_OFFSET;
+      const dir = lane > 0 ? 1 : -1;
+      const pick = pickCraft();
+      const isBig = pick === 'marsRover' || pick === 'hoverHauler';
+      const angle = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      const speed = isBig ? 46 + rand() * 20 : 68 + rand() * 34;
+      add(pick, roadX + lane, y + (rand() - 0.5) * 30, angle, {
+        road: {
+          axis: 'y',
+          roadCoord: roadX,
+          laneOffset: lane,
+          laneWidth: LANE_OFFSET,
+          dir,
+          speed,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+
+  // 4. Hover-scooter aliens zipping along the outer glowing hover-lanes
+  for (const roadY of roads) {
+    for (let x = -1150; x <= 1150; x += 460) {
+      if (roads.some((rx) => Math.abs(x - rx) < 105)) continue;
+      const dir = rand() < 0.5 ? 1 : -1;
+      const lane = dir > 0 ? BIKE_LANE_OFFSET : -BIKE_LANE_OFFSET;
+      const angle = dir > 0 ? 0 : Math.PI;
+      add('hoverScooter', x + (rand() - 0.5) * 70, roadY + lane, angle, {
+        color: alienTints[Math.floor(rand() * alienTints.length)],
+        accent: '#5be9f5',
+        road: {
+          axis: 'x',
+          roadCoord: roadY,
+          laneOffset: lane,
+          laneWidth: BIKE_LANE_OFFSET,
+          dir,
+          speed: 58 + rand() * 24,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+  for (const roadX of roads) {
+    for (let y = -1150; y <= 1150; y += 460) {
+      if (roads.some((ry) => Math.abs(y - ry) < 105)) continue;
+      const dir = rand() < 0.5 ? 1 : -1;
+      const lane = dir > 0 ? BIKE_LANE_OFFSET : -BIKE_LANE_OFFSET;
+      const angle = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      add('hoverScooter', roadX + lane, y + (rand() - 0.5) * 70, angle, {
+        color: alienTints[Math.floor(rand() * alienTints.length)],
+        accent: '#5be9f5',
+        road: {
+          axis: 'y',
+          roadCoord: roadX,
+          laneOffset: lane,
+          laneWidth: BIKE_LANE_OFFSET,
+          dir,
+          speed: 58 + rand() * 24,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+
+  // 5. Giant Colony Spires & Comms Arrays (Tier 6)
+  const giantSpots = [
+    [-500, -1060], [500, -1060],
+    [-1060, -500], [1060, -500],
+    [-1060, 0], [1060, 0],
+    [-1060, 500], [1060, 500],
+    [-500, 1060], [500, 1060], [0, 1060],
+  ];
+  giantSpots.forEach(([gx, gy], idx) => {
+    add(idx % 2 === 0 ? 'colonyTower' : 'radarDish', gx + (rand() - 0.5) * 40, gy + (rand() - 0.5) * 40, 0);
+  });
+
+  // 6. Glass Martian Biodomes (Tier 5)
+  const midBlocks = [
+    [-500, -500], [0, -500], [500, -500],
+    [-500, 0], [500, 0],
+    [-500, 500], [0, 500], [500, 500],
+  ];
+  for (const [bx, by] of midBlocks) {
+    for (const [ox, oy] of [[-85, -80], [85, -80], [-85, 85], [85, 85]]) {
+      add('habDome', bx + ox + (rand() - 0.5) * 24, by + oy + (rand() - 0.5) * 24, 0);
+    }
+  }
+
+  // 7. Scatter crystal spires, alien flora pods, solar arrays, beacons, rocks & wandering aliens
+  const scatter = [
+    ['crystalSpire', 44],
+    ['marsPod', 46],
+    ['solarPanel', 32],
+    ['beacon', 28],
+    ['marsCrystal', 38],
+    ['marsRock', 38],
+    ['alien', 38],
+  ];
+  for (const [type, count] of scatter) {
+    let placed = 0;
+    let attempts = 0;
+    while (placed < count && attempts < count * 12) {
+      attempts++;
+      const x = (rand() * 2 - 1) * (halfSize - 90);
+      const y = (rand() * 2 - 1) * (halfSize - 90);
+      if (roads.some((r) => Math.abs(x - r) < 66 || Math.abs(y - r) < 66)) continue;
+      const extra = type === 'alien' ? makeAlienExtra() : {};
+      if (add(type, x, y, rand() * Math.PI * 2, extra)) placed++;
+    }
+  }
+
+  return { mapId: 'mars', halfSize, roads, craters, props };
 }

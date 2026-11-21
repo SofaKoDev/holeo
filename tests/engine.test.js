@@ -171,4 +171,34 @@ describe('Holeo engine', () => {
     }
     expect(moved).toBeGreaterThan(cyclists.length * 0.7);
   });
+
+  it('generates Mars Colony with wandering aliens, spaceship traffic, and Martian landmarks', () => {
+    const game = createGame({ mode: 'sandbox', mapId: 'mars', seed: 42 });
+    startGame(game);
+    expect(game.town.mapId).toBe('mars');
+    expect(game.town.props.some((p) => p.shape === 'mothership')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'marsRocket')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'habDome')).toBe(true);
+
+    const aliens = game.town.props.filter((p) => p.shape === 'alien');
+    const crafts = game.town.props.filter((p) => p.motion === 'road');
+    expect(aliens.length).toBeGreaterThan(20);
+    expect(crafts.length).toBeGreaterThan(15);
+
+    const alienStart = aliens.map((a) => ({ x: a.x, y: a.y }));
+    const craftStart = crafts.map((c) => ({ x: c.x, y: c.y }));
+    for (let i = 0; i < 80; i++) stepGame(game, 0.04, 0, 0);
+
+    const movedAliens = aliens.filter((a, i) => Math.hypot(a.x - alienStart[i].x, a.y - alienStart[i].y) > 4);
+    expect(movedAliens.length).toBeGreaterThan(aliens.length * 0.6);
+
+    let movedCrafts = 0;
+    for (let i = 0; i < crafts.length; i++) {
+      const c = crafts[i];
+      if (Math.hypot(c.x - craftStart[i].x, c.y - craftStart[i].y) > 5) movedCrafts++;
+      const onLane = game.town.roads.some((r) => Math.abs(c.x - r) <= 56 || Math.abs(c.y - r) <= 56);
+      expect(onLane).toBe(true);
+    }
+    expect(movedCrafts).toBeGreaterThan(crafts.length * 0.7);
+  });
 });
