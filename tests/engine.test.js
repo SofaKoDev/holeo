@@ -201,4 +201,39 @@ describe('Holeo engine', () => {
     }
     expect(movedCrafts).toBeGreaterThan(crafts.length * 0.7);
   });
+
+  it('generates Playroom with block buildings, stuffed animals, hobby horses, wind-up toys, and toy road vehicles', () => {
+    const game = createGame({ mode: 'sandbox', mapId: 'playroom', seed: 42 });
+    startGame(game);
+    expect(game.town.mapId).toBe('playroom');
+    expect(game.town.props.some((p) => p.shape === 'blockCastle')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'playTent')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'blockTower')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'blockHouse')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'rockingHorse')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'teddyBear')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'plushDino')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'plushElephant')).toBe(true);
+
+    const windups = game.town.props.filter((p) => p.shape === 'windupToy');
+    const vehicles = game.town.props.filter((p) => p.motion === 'road');
+    expect(windups.length).toBeGreaterThan(20);
+    expect(vehicles.length).toBeGreaterThan(15);
+
+    const windupStart = windups.map((w) => ({ x: w.x, y: w.y }));
+    const vehicleStart = vehicles.map((v) => ({ x: v.x, y: v.y }));
+    for (let i = 0; i < 80; i++) stepGame(game, 0.04, 0, 0);
+
+    const movedWindups = windups.filter((w, i) => Math.hypot(w.x - windupStart[i].x, w.y - windupStart[i].y) > 4);
+    expect(movedWindups.length).toBeGreaterThan(windups.length * 0.6);
+
+    let movedVehicles = 0;
+    for (let i = 0; i < vehicles.length; i++) {
+      const v = vehicles[i];
+      if (Math.hypot(v.x - vehicleStart[i].x, v.y - vehicleStart[i].y) > 5) movedVehicles++;
+      const onLane = game.town.roads.some((r) => Math.abs(v.x - r) <= 56 || Math.abs(v.y - r) <= 56);
+      expect(onLane).toBe(true);
+    }
+    expect(movedVehicles).toBeGreaterThan(vehicles.length * 0.7);
+  });
 });

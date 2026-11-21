@@ -2,7 +2,7 @@ import './styles.css';
 import { MAPS, TIERS, tierForRadius, tierProgressForRadius } from './catalog.js';
 import { createGame, startGame, togglePause, stepGame } from './engine.js';
 import { renderGame } from './render.js';
-import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk, playBikeBell, playSciFiHonk } from './audio.js';
+import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk, playBikeBell, playSciFiHonk, playToySqueak } from './audio.js';
 
 const BEST_KEY_PREFIX = 'holeo-arcade-best-v1';
 const LEVIS_GAMES_URL = 'https://sofakodev.github.io/levis-games/';
@@ -234,7 +234,8 @@ function syncUi() {
     $('#hud-mid-val').textContent = formatTime(state.timeLeft);
   } else {
     const pct = Math.min(100, Math.round((state.swallowedCount / state.totalProps) * 100));
-    $('#hud-mid-label').textContent = state.mapId === 'metro' ? 'CITY' : state.mapId === 'mars' ? 'MARS' : 'TOWN';
+    $('#hud-mid-label').textContent =
+      state.mapId === 'metro' ? 'CITY' : state.mapId === 'mars' ? 'MARS' : state.mapId === 'playroom' ? 'ROOM' : 'TOWN';
     $('#hud-mid-val').textContent = `${pct}%`;
   }
 
@@ -280,7 +281,7 @@ function loop(now) {
   if (state.phase === 'playing') {
     const [ix, iy] = getInputVector();
     const { captured, swallowed, leveledUp } = stepGame(state, dt, ix, iy);
-    const isLivingWalker = (p) => p.shape === 'person' || p.shape === 'alien';
+    const isLivingWalker = (p) => p.shape === 'person' || p.shape === 'alien' || p.shape === 'windupToy';
     const capturedPeople = captured.filter(isLivingWalker);
     const anyStandingPersonLeft = capturedPeople.length > 0 && state.town.props.some(
       (p) => isLivingWalker(p) && !p.swallowing && !p.swallowed,
@@ -290,10 +291,25 @@ function loop(now) {
       playPersonFall(soundEnabled, { isLastPerson });
     });
     for (const prop of captured) {
-      if (prop.shape === 'car' || prop.shape === 'truck' || prop.shape === 'bus') {
-        playVehicleHonk(prop.shape, soundEnabled);
-      } else if (prop.shape === 'cyclist') {
+      if (
+        prop.shape === 'car' ||
+        prop.shape === 'truck' ||
+        prop.shape === 'bus' ||
+        prop.shape === 'toyCar' ||
+        prop.shape === 'toyTruck' ||
+        prop.shape === 'toyTrain'
+      ) {
+        playVehicleHonk(prop.shape === 'toyTruck' || prop.shape === 'toyTrain' ? 'truck' : prop.shape, soundEnabled);
+      } else if (prop.shape === 'cyclist' || prop.shape === 'toyScooter') {
         playBikeBell(soundEnabled);
+      } else if (
+        prop.shape === 'rubberDuck' ||
+        prop.shape === 'plushBunny' ||
+        prop.shape === 'teddyBear' ||
+        prop.shape === 'plushDino' ||
+        prop.shape === 'plushElephant'
+      ) {
+        playToySqueak(soundEnabled);
       } else if (
         prop.shape === 'hoverCar' ||
         prop.shape === 'saucerCar' ||
