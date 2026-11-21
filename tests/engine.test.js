@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { TIERS, tierProgressForRadius } from '../src/catalog.js';
+import { pickPersonFallSound, shouldPlayVehicleHonk } from '../src/audio.js';
 import { createGame, startGame, stepGame, togglePause, START_RADIUS, ARCADE_DURATION } from '../src/engine.js';
 
 describe('Holeo engine', () => {
@@ -127,5 +128,23 @@ describe('Holeo engine', () => {
     }
 
     expect(game.hole.tier).toBeGreaterThanOrEqual(2);
+  });
+
+  it('emits captured events for falling people/cars and saves wilhelm scream for the last person', () => {
+    expect(pickPersonFallSound(0.99, true)).toBe('wilhelm');
+    expect(pickPersonFallSound(0.10, false)).toBe('yelp');
+    expect(pickPersonFallSound(0.35, false)).toBe('scream');
+    expect(pickPersonFallSound(0.45, false)).toBe('none');
+    expect(pickPersonFallSound(0.95, false)).toBe('none');
+    expect(shouldPlayVehicleHonk(0.2)).toBe(true);
+    expect(shouldPlayVehicleHonk(0.75)).toBe(false);
+
+    const game = createGame({ mode: 'sandbox', seed: 42 });
+    startGame(game);
+    const person = game.town.props.find((p) => p.shape === 'person');
+    game.hole.x = person.x;
+    game.hole.y = person.y;
+    const step = stepGame(game, 0.04, 0, 0);
+    expect(step.captured).toContain(person);
   });
 });

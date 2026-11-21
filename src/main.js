@@ -2,7 +2,7 @@ import './styles.css';
 import { TIERS, tierForRadius, tierProgressForRadius } from './catalog.js';
 import { createGame, startGame, togglePause, stepGame } from './engine.js';
 import { renderGame } from './render.js';
-import { playSwallow, playLevelUp } from './audio.js';
+import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk } from './audio.js';
 
 const BEST_KEY = 'holeo-arcade-best-v1';
 const $ = (sel) => document.querySelector(sel);
@@ -259,7 +259,20 @@ function loop(now) {
 
   if (state.phase === 'playing') {
     const [ix, iy] = getInputVector();
-    const { swallowed, leveledUp } = stepGame(state, dt, ix, iy);
+    const { captured, swallowed, leveledUp } = stepGame(state, dt, ix, iy);
+    const capturedPeople = captured.filter((p) => p.shape === 'person');
+    const anyStandingPersonLeft = capturedPeople.length > 0 && state.town.props.some(
+      (p) => p.shape === 'person' && !p.swallowing && !p.swallowed,
+    );
+    capturedPeople.forEach((p, idx) => {
+      const isLastPerson = !anyStandingPersonLeft && idx === capturedPeople.length - 1;
+      playPersonFall(soundEnabled, { isLastPerson });
+    });
+    for (const prop of captured) {
+      if (prop.shape === 'car' || prop.shape === 'truck' || prop.shape === 'bus') {
+        playVehicleHonk(prop.shape, soundEnabled);
+      }
+    }
     if (swallowed.length) playSwallow(swallowed[swallowed.length - 1].tier, soundEnabled);
     if (leveledUp) playLevelUp(soundEnabled);
     syncUi();
