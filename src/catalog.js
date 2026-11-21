@@ -1,11 +1,16 @@
 export const TIERS = [
   { level: 1, minRadius: 20, label: 'Tiny Treasures' },
-  { level: 2, minRadius: 31, label: 'Street Gear' },
-  { level: 3, minRadius: 46, label: 'Cars & Bushes' },
-  { level: 4, minRadius: 70, label: 'Trees & Trucks' },
-  { level: 5, minRadius: 104, label: 'Houses & Cafes' },
-  { level: 6, minRadius: 148, label: 'City Blocks' },
-  { level: 7, minRadius: 205, label: 'Skyscrapers!' },
+  { level: 2, minRadius: 26, label: 'Sidewalk Gear' },
+  { level: 3, minRadius: 34, label: 'Park & Bushes' },
+  { level: 4, minRadius: 42, label: 'Compact Cars' },
+  { level: 5, minRadius: 54, label: 'Park Trees' },
+  { level: 6, minRadius: 68, label: 'Trucks & Buses' },
+  { level: 7, minRadius: 86, label: 'Cozy Cottages' },
+  { level: 8, minRadius: 102, label: 'Town Houses' },
+  { level: 9, minRadius: 130, label: 'Apartments' },
+  { level: 10, minRadius: 150, label: 'City Offices' },
+  { level: 11, minRadius: 180, label: 'Skyscrapers' },
+  { level: 12, minRadius: 205, label: 'City Eater!' },
 ];
 
 export const PROPS = {
@@ -54,4 +59,15 @@ export function tierForRadius(radius) {
     if (radius >= t.minRadius) current = t;
   }
   return current;
+}
+
+export function tierProgressForRadius(radius) {
+  let idx = 0;
+  for (let i = 0; i < TIERS.length; i++) {
+    if (radius >= TIERS[i].minRadius) idx = i;
+  }
+  if (idx >= TIERS.length - 1) return 1;
+  const cur = TIERS[idx].minRadius;
+  const next = TIERS[idx + 1].minRadius;
+  return Math.max(0, Math.min(1, (radius - cur) / Math.max(1, next - cur)));
 }

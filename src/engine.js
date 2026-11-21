@@ -3,7 +3,8 @@ import { createTown, LANE_OFFSET, makeRng } from './world.js';
 
 export const ARCADE_DURATION = 120; // seconds
 export const START_RADIUS = 22;
-const SWALLOW_RATIO = 0.88; // prop fits if prop.radius <= hole.radius * SWALLOW_RATIO
+const SWALLOW_RATIO = 0.90; // prop fits if prop.radius <= hole.radius * SWALLOW_RATIO
+const MASS_GROWTH_MULTIPLIER = 3.2; // brisk, evenly paced growth across all 12 levels
 
 function lerpAngle(a, b, t) {
   let diff = ((b - a + Math.PI) % (Math.PI * 2)) - Math.PI;
@@ -313,7 +314,7 @@ export function stepGame(state, dt, inputX = 0, inputY = 0) {
       if (prop.swallowProgress >= 1) {
         prop.swallowed = true;
         state.swallowedCount++;
-        hole.mass += prop.mass * 1.35;
+        hole.mass += prop.mass * MASS_GROWTH_MULTIPLIER;
         hole.radius = radiusFromMass(hole.mass);
         state.score += prop.points;
         swallowedNow.push(prop);

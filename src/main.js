@@ -1,5 +1,5 @@
 import './styles.css';
-import { TIERS, tierForRadius } from './catalog.js';
+import { TIERS, tierForRadius, tierProgressForRadius } from './catalog.js';
 import { createGame, startGame, togglePause, stepGame } from './engine.js';
 import { renderGame } from './render.js';
 import { playSwallow, playLevelUp } from './audio.js';
@@ -29,9 +29,10 @@ document.querySelector('#app').innerHTML = `
     <canvas id="game-canvas" aria-label="Holeo town map"></canvas>
 
     <header class="hud" id="hud" hidden>
-      <div class="hud-pill">
+      <div class="hud-pill hud-pill-tier">
         <small>SIZE</small>
         <strong id="hud-tier">Lv.1 · Tiny</strong>
+        <div class="tier-progress" aria-hidden="true"><span id="hud-tier-bar"></span></div>
       </div>
       <div class="hud-pill">
         <small id="hud-mid-label">TOWN</small>
@@ -205,6 +206,8 @@ function syncUi() {
 
   const tier = tierForRadius(state.hole.radius);
   $('#hud-tier').textContent = `Lv.${tier.level}/${TIERS.length} · ${tier.label}`;
+  const pctNext = Math.round(tierProgressForRadius(state.hole.radius) * 100);
+  $('#hud-tier-bar').style.width = `${pctNext}%`;
   $('#hud-score').textContent = state.score.toLocaleString();
 
   if (state.mode === 'arcade') {

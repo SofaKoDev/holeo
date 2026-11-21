@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { TIERS, tierProgressForRadius } from '../src/catalog.js';
 import { createGame, startGame, stepGame, togglePause, START_RADIUS, ARCADE_DURATION } from '../src/engine.js';
 
 describe('Holeo engine', () => {
@@ -109,5 +110,22 @@ describe('Holeo engine', () => {
     expect(tiny.vz).toBeLessThan(vz1); // accelerating downward under gravity
     expect(tiny.z).toBeLessThan(z1);
     expect(tiny.tilt).toBeGreaterThan(0);
+  });
+
+  it('levels up quickly through a 12-level ladder as starter props are swallowed', () => {
+    expect(TIERS.length).toBe(12);
+    expect(tierProgressForRadius(START_RADIUS)).toBeGreaterThan(0);
+    expect(tierProgressForRadius(START_RADIUS)).toBeLessThan(1);
+
+    const game = createGame({ mode: 'sandbox', seed: 42 });
+    startGame(game);
+    const starters = game.town.props.filter((p) => p.tier === 1).slice(0, 12);
+    for (const prop of starters) {
+      game.hole.x = prop.x;
+      game.hole.y = prop.y;
+      for (let i = 0; i < 20; i++) stepGame(game, 0.04, 0, 0);
+    }
+
+    expect(game.hole.tier).toBeGreaterThanOrEqual(2);
   });
 });
