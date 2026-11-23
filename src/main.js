@@ -5,25 +5,49 @@ import { renderGame } from './render.js';
 import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk, playBikeBell, playSciFiHonk, playToySqueak } from './audio.js';
 
 const BEST_KEY_PREFIX = 'holeo-arcade-best-v1';
+const SOUND_KEY = 'holeo-sound-v1';
 const LEVIS_GAMES_URL = 'https://sofakodev.github.io/levis-games/';
 const $ = (sel) => document.querySelector(sel);
+
+const bestScoreCache = new Map();
 
 function bestKeyFor(mapId) {
   return mapId === 'town' ? BEST_KEY_PREFIX : `${BEST_KEY_PREFIX}-${mapId}`;
 }
 
 function readBest(mapId = 'town') {
+  if (bestScoreCache.has(mapId)) return bestScoreCache.get(mapId);
   try {
     const val = Number(localStorage.getItem(bestKeyFor(mapId)));
-    return Number.isFinite(val) && val > 0 ? val : 0;
+    const best = Number.isFinite(val) && val > 0 ? val : 0;
+    bestScoreCache.set(mapId, best);
+    return best;
   } catch {
     return 0;
   }
 }
 
 function writeBest(score, mapId = 'town') {
+  bestScoreCache.set(mapId, score);
   try {
     localStorage.setItem(bestKeyFor(mapId), String(score));
+  } catch {
+    // Ignore storage failures
+  }
+}
+
+function readSoundEnabled() {
+  try {
+    const val = localStorage.getItem(SOUND_KEY);
+    return val === null ? true : val !== 'false';
+  } catch {
+    return true;
+  }
+}
+
+function writeSoundEnabled(enabled) {
+  try {
+    localStorage.setItem(SOUND_KEY, String(enabled));
   } catch {
     // Ignore storage failures
   }
@@ -118,23 +142,52 @@ document.querySelector('#app').innerHTML = `
 const canvas = $('#game-canvas');
 const ctx = canvas.getContext('2d');
 
+const ui = {
+  hud: $('#hud'),
+  hudTier: $('#hud-tier'),
+  hudTierBar: $('#hud-tier-bar'),
+  hudMidLabel: $('#hud-mid-label'),
+  hudMidVal: $('#hud-mid-val'),
+  hudScore: $('#hud-score'),
+  btnSound: $('#btn-sound'),
+  milestoneBanner: $('#milestone-banner'),
+  overlayStart: $('#overlay-start'),
+  overlayPause: $('#overlay-pause'),
+  overlayFinish: $('#overlay-finish'),
+  arcadeBestLabel: $('#arcade-best-label'),
+  finishKicker: $('#finish-kicker'),
+  finishTitle: $('#finish-title'),
+  finishScore: $('#finish-score'),
+  finishSummary: $('#finish-summary'),
+};
+
 let selectedMapId = MAPS[0].id;
 let state = createGame({ mode: 'sandbox', mapId: selectedMapId });
-let soundEnabled = true;
+let soundEnabled = readSoundEnabled();
 let width = window.innerWidth;
 let height = window.innerHeight;
 let lastTime = 0;
 let rafId = 0;
 
+function syncSoundButton() {
+  ui.btnSound.textContent = soundEnabled ? '🔊' : '🔇';
+  ui.btnSound.setAttribute('aria-pressed', String(soundEnabled));
+}
+
 // Keyboard state
 const keys = new Set();
 window.addEventListener('keydown', (e) => {
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && state.phase === 'playing') {
+    e.preventDefault();
+  }
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) {
     keys.add(e.key.toLowerCase());
   }
   if (e.key === 'Escape' && (state.phase === 'playing' || state.phase === 'paused')) {
     togglePause(state);
     syncUi();
+    if (state.phase === 'playing') scheduleLoop();
+    else stopLoop();
   }
 });
 window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
@@ -144,6 +197,7 @@ window.addEventListener('blur', () => {
   if (state.phase === 'playing') {
     togglePause(state);
     syncUi();
+    stopLoop();
   }
 });
 
@@ -216,34 +270,34 @@ function formatTime(sec) {
 
 function syncUi() {
   const best = readBest(selectedMapId);
-  $('#arcade-best-label').textContent = best ? `Best score: ${best.toLocaleString()}` : '2 minutes · High score chase';
+  ui.arcadeBestLabel.textContent = best ? `Best score: ${best.toLocaleString()}` : '2 minutes · High score chase';
 
-  $('#hud').hidden = state.phase === 'ready';
-  $('#overlay-start').hidden = state.phase !== 'ready';
-  $('#overlay-pause').hidden = state.phase !== 'paused';
-  $('#overlay-finish').hidden = state.phase !== 'finished';
+  ui.hud.hidden = state.phase === 'ready';
+  ui.overlayStart.hidden = state.phase !== 'ready';
+  ui.overlayPause.hidden = state.phase !== 'paused';
+  ui.overlayFinish.hidden = state.phase !== 'finished';
 
   const tier = tierForRadius(state.hole.radius);
-  $('#hud-tier').textContent = `Lv.${tier.level}/${TIERS.length} · ${tier.label}`;
+  ui.hudTier.textContent = `Lv.${tier.level}/${TIERS.length} · ${tier.label}`;
   const pctNext = Math.round(tierProgressForRadius(state.hole.radius) * 100);
-  $('#hud-tier-bar').style.width = `${pctNext}%`;
-  $('#hud-score').textContent = state.score.toLocaleString();
+  ui.hudTierBar.style.width = `${pctNext}%`;
+  ui.hudScore.textContent = state.score.toLocaleString();
 
   if (state.mode === 'arcade') {
-    $('#hud-mid-label').textContent = 'TIME';
-    $('#hud-mid-val').textContent = formatTime(state.timeLeft);
+    ui.hudMidLabel.textContent = 'TIME';
+    ui.hudMidVal.textContent = formatTime(state.timeLeft);
   } else {
     const pct = Math.min(100, Math.round((state.swallowedCount / state.totalProps) * 100));
-    $('#hud-mid-label').textContent =
+    ui.hudMidLabel.textContent =
       state.mapId === 'metro' ? 'CITY' : state.mapId === 'mars' ? 'MARS' : state.mapId === 'playroom' ? 'ROOM' : 'TOWN';
-    $('#hud-mid-val').textContent = `${pct}%`;
+    ui.hudMidVal.textContent = `${pct}%`;
   }
 
   if (state.banner) {
-    $('#milestone-banner').hidden = false;
-    $('#milestone-banner').textContent = state.banner.text;
+    ui.milestoneBanner.hidden = false;
+    ui.milestoneBanner.textContent = state.banner.text;
   } else {
-    $('#milestone-banner').hidden = true;
+    ui.milestoneBanner.hidden = true;
   }
 
   if (state.phase === 'finished') {
@@ -254,10 +308,10 @@ function syncUi() {
     }
     const pct = Math.round((state.swallowedCount / state.totalProps) * 100);
     const mapMeta = MAPS.find((m) => m.id === state.mapId) || MAPS[0];
-    $('#finish-kicker').textContent = newBest ? 'NEW HIGH SCORE!' : state.finishedReason === 'cleared' ? '100% CLEARED!' : 'TIME IS UP!';
-    $('#finish-title').textContent = state.finishedReason === 'cleared' ? `You Swallowed ${mapMeta.name}!` : 'What a Giant Hole!';
-    $('#finish-score').textContent = state.score.toLocaleString();
-    $('#finish-summary').textContent = `Swallowed ${state.swallowedCount} of ${state.totalProps} items (${pct}%) · Reached Lv.${tier.level} (${tier.label})`;
+    ui.finishKicker.textContent = newBest ? 'NEW HIGH SCORE!' : state.finishedReason === 'cleared' ? '100% CLEARED!' : 'TIME IS UP!';
+    ui.finishTitle.textContent = state.finishedReason === 'cleared' ? `You Swallowed ${mapMeta.name}!` : 'What a Giant Hole!';
+    ui.finishScore.textContent = state.score.toLocaleString();
+    ui.finishSummary.textContent = `Swallowed ${state.swallowedCount} of ${state.totalProps} items (${pct}%) · Reached Lv.${tier.level} (${tier.label})`;
   }
 }
 
@@ -279,6 +333,12 @@ function loop(now) {
   lastTime = now;
 
   if (state.phase === 'playing') {
+    const prevScore = state.score;
+    const prevSwallowed = state.swallowedCount;
+    const prevTimeSec = Math.ceil(state.timeLeft);
+    const prevBanner = state.banner ? state.banner.text : '';
+    const prevPhase = state.phase;
+
     const [ix, iy] = getInputVector();
     const { captured, swallowed, leveledUp } = stepGame(state, dt, ix, iy);
     const isLivingWalker = (p) => p.shape === 'person' || p.shape === 'alien' || p.shape === 'windupToy';
@@ -322,7 +382,18 @@ function loop(now) {
     }
     if (swallowed.length) playSwallow(swallowed[swallowed.length - 1].tier, soundEnabled);
     if (leveledUp) playLevelUp(soundEnabled);
-    syncUi();
+
+    const nextTimeSec = Math.ceil(state.timeLeft);
+    const nextBanner = state.banner ? state.banner.text : '';
+    if (
+      state.score !== prevScore ||
+      state.swallowedCount !== prevSwallowed ||
+      nextTimeSec !== prevTimeSec ||
+      nextBanner !== prevBanner ||
+      state.phase !== prevPhase
+    ) {
+      syncUi();
+    }
   }
 
   renderGame(ctx, state, width, height, pointer);
@@ -379,11 +450,12 @@ $('#btn-menu-pause').onclick = $('#btn-menu-finish').onclick = () => {
   syncUi();
   renderGame(ctx, state, width, height, pointer);
 };
-$('#btn-sound').onclick = () => {
+ui.btnSound.onclick = () => {
   soundEnabled = !soundEnabled;
-  $('#btn-sound').textContent = soundEnabled ? '🔊' : '🔇';
-  $('#btn-sound').setAttribute('aria-pressed', String(soundEnabled));
+  writeSoundEnabled(soundEnabled);
+  syncSoundButton();
 };
 
+syncSoundButton();
 resize();
 syncUi();

@@ -4,7 +4,7 @@ let lastHonkAt = 0;
 let lastBellAt = 0;
 let lastSqueakAt = 0;
 let wilhelmBuffer = null;
-let wilhelmLoading = false;
+let wilhelmAttempted = false;
 
 function getWilhelmUrl() {
   const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) || '/';
@@ -17,18 +17,15 @@ function getContext() {
     if (AudioCtx) ctx = new AudioCtx();
   }
   if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
-  if (ctx && !wilhelmBuffer && !wilhelmLoading && typeof fetch === 'function') {
-    wilhelmLoading = true;
+  if (ctx && !wilhelmBuffer && !wilhelmAttempted && typeof fetch === 'function') {
+    wilhelmAttempted = true;
     fetch(getWilhelmUrl())
       .then((res) => (res.ok ? res.arrayBuffer() : null))
       .then((buf) => (buf && ctx ? ctx.decodeAudioData(buf) : null))
       .then((decoded) => {
         if (decoded) wilhelmBuffer = decoded;
       })
-      .catch(() => {})
-      .finally(() => {
-        wilhelmLoading = false;
-      });
+      .catch(() => {});
   }
   return ctx;
 }
