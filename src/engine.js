@@ -76,16 +76,16 @@ export function togglePause(state) {
   else if (state.phase === 'paused') state.phase = 'playing';
 }
 
-function updateRoadVehicle(prop, state, dt) {
+function updateRoadVehicle(prop, state, dt, roadProps) {
   const r = prop.road;
   if (!r) return;
-  const { roads, halfSize, props } = state.town;
+  const { roads, halfSize } = state.town;
 
   // Check if another active vehicle/cyclist is directly ahead in the same lane
   const laneWidth = r.laneWidth || LANE_OFFSET;
   let blocked = false;
-  for (const other of props) {
-    if (other === prop || other.swallowed || other.swallowing || !other.road) continue;
+  for (const other of roadProps) {
+    if (other === prop || other.swallowed || other.swallowing) continue;
     if (
       other.road.axis !== r.axis ||
       other.road.roadCoord !== r.roadCoord ||
@@ -181,7 +181,7 @@ function updateRoadVehicle(prop, state, dt) {
   prop.angle = lerpAngle(prop.angle, r.targetAngle, 1 - Math.exp(-10 * dt));
 }
 
-function updateWanderer(prop, state, dt) {
+function updateWanderer(prop, state, dt, buildingProps) {
   const w = prop.wander;
   if (!w) return;
   const hole = state.hole;
@@ -220,8 +220,8 @@ function updateWanderer(prop, state, dt) {
 
   // Gently steer around large buildings so people don't walk through houses
   if (!blocked) {
-    for (const other of state.town.props) {
-      if (other.swallowed || other.swallowing || other.tier < 5) continue;
+    for (const other of buildingProps) {
+      if (other.swallowed || other.swallowing) continue;
       if (Math.hypot(nextX - other.x, nextY - other.y) < other.radius + prop.radius + 6) {
         blocked = true;
         break;
@@ -279,13 +279,21 @@ export function stepGame(state, dt, inputX = 0, inputY = 0) {
   const swallowedNow = [];
   let leveledUp = null;
 
+  const roadProps = [];
+  const buildingProps = [];
+  for (const p of state.town.props) {
+    if (p.swallowed || p.swallowing) continue;
+    if (p.road) roadProps.push(p);
+    if (p.tier >= 5) buildingProps.push(p);
+  }
+
   for (const prop of state.town.props) {
     if (prop.swallowed) continue;
     if (prop.bump > 0) prop.bump = Math.max(0, prop.bump - clampedDt * 4.5);
 
     if (!prop.swallowing) {
-      if (prop.motion === 'road') updateRoadVehicle(prop, state, clampedDt);
-      else if (prop.motion === 'wander') updateWanderer(prop, state, clampedDt);
+      if (prop.motion === 'road') updateRoadVehicle(prop, state, clampedDt, roadProps);
+      else if (prop.motion === 'wander') updateWanderer(prop, state, clampedDt, buildingProps);
     }
 
     const dx = hole.x - prop.x;
