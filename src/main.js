@@ -297,7 +297,9 @@ function syncUi() {
             ? 'ROOM'
             : state.mapId === 'reef'
               ? 'REEF'
-              : 'TOWN';
+              : state.mapId === 'stampede'
+                ? 'CROWD'
+                : 'TOWN';
     ui.hudMidVal.textContent = `${pct}%`;
   }
 
@@ -354,9 +356,14 @@ function loop(now) {
     const anyStandingPersonLeft = capturedPeople.length > 0 && state.town.props.some(
       (p) => isLivingWalker(p) && !p.swallowing && !p.swallowed,
     );
+    const isStampede = state.mapId === 'stampede';
     capturedPeople.forEach((p, idx) => {
       const isLastPerson = !anyStandingPersonLeft && idx === capturedPeople.length - 1;
-      playPersonFall(soundEnabled, { isLastPerson });
+      playPersonFall(soundEnabled, {
+        isLastPerson,
+        alwaysScream: isStampede,
+        delay: isStampede ? idx * 0.045 : 0,
+      });
     });
     for (const prop of captured) {
       if (
