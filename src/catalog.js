@@ -4,6 +4,7 @@ export const MAPS = [
   { id: 'mars', name: 'Mars Colony', subtitle: 'Aliens, hover-cars & biodomes', badge: '🪐' },
   { id: 'playroom', name: 'Playroom', subtitle: 'Toy blocks, plushies & play rug', badge: '🧸' },
   { id: 'reef', name: 'Coral Reef', subtitle: 'Mermen, fish cars & coral towers', badge: '🐚' },
+  { id: 'stampede', name: 'Turbo Crowd', subtitle: 'Just people — sprinting super fast!', badge: '🏃' },
 ];
 
 export const TIERS = [

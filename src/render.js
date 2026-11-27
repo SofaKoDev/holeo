@@ -4,10 +4,29 @@ function drawTownGround(ctx, town) {
   const isMars = town.mapId === 'mars';
   const isPlayroom = town.mapId === 'playroom';
   const isReef = town.mapId === 'reef';
+  const isStampede = town.mapId === 'stampede';
 
-  // Base terrain: sunlit grass for Cozy Town, concrete for Metro, red desert for Mars, hardwood for Playroom, turquoise seabed for Coral Reef
-  ctx.fillStyle = isReef ? '#69c0cf' : isPlayroom ? '#e6c79c' : isMars ? '#d47a57' : isMetro ? '#cfd5dc' : '#c5e2b5';
+  // Base terrain: sunlit grass for Cozy Town, concrete for Metro, red desert for Mars, hardwood for Playroom, turquoise seabed for Coral Reef, stadium turf for Turbo Crowd
+  ctx.fillStyle = isStampede
+    ? '#8fd17f'
+    : isReef
+      ? '#69c0cf'
+      : isPlayroom
+        ? '#e6c79c'
+        : isMars
+          ? '#d47a57'
+          : isMetro
+            ? '#cfd5dc'
+            : '#c5e2b5';
   ctx.fillRect(-half, -half, half * 2, half * 2);
+
+  // Subtle mowed turf stripes in Turbo Crowd stadium
+  if (isStampede) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    for (let x = -half; x < half; x += 180) {
+      ctx.fillRect(x, -half, 90, half * 2);
+    }
+  }
 
   // Subtle underwater caustic ripple bands in Coral Reef
   if (isReef) {
@@ -37,11 +56,56 @@ function drawTownGround(ctx, town) {
   }
 
   // Outer border
-  ctx.strokeStyle = isReef ? '#3a8ea3' : isPlayroom ? '#b88856' : isMars ? '#a8573b' : isMetro ? '#8f9aa8' : '#9ec78e';
+  ctx.strokeStyle = isStampede ? '#63a858' : isReef ? '#3a8ea3' : isPlayroom ? '#b88856' : isMars ? '#a8573b' : isMetro ? '#8f9aa8' : '#9ec78e';
   ctx.lineWidth = 28;
   ctx.strokeRect(-half, -half, half * 2, half * 2);
 
-  if (isReef) {
+  if (isStampede) {
+    // Giant terracotta oval running track looping around the stadium field
+    ctx.save();
+    ctx.strokeStyle = '#d96b52';
+    ctx.lineWidth = 148;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 740, 560, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Crisp white track lane dividers
+    ctx.strokeStyle = 'rgba(255, 252, 245, 0.72)';
+    ctx.lineWidth = 3.5;
+    for (const offset of [-66, -22, 22, 66]) {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 740 + offset, 560 + offset, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Checkered finish strip on the top & bottom straightaways
+    for (const fy of [-560, 560]) {
+      for (let r = 0; r < 6; r++) {
+        for (let c = 0; c < 2; c++) {
+          ctx.fillStyle = (r + c) % 2 === 0 ? 'rgba(255, 255, 255, 0.85)' : 'rgba(35, 45, 58, 0.65)';
+          ctx.fillRect(-20 + c * 20, fy - 66 + r * 22, 20, 22);
+        }
+      }
+    }
+
+    // Sunny central start plaza at (0, 0)
+    ctx.fillStyle = '#f5ebd6';
+    ctx.beginPath();
+    ctx.arc(0, 0, 155, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#d96b52';
+    ctx.lineWidth = 6;
+    ctx.setLineDash([14, 12]);
+    ctx.beginPath();
+    ctx.arc(0, 0, 132, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ffe599';
+    ctx.beginPath();
+    ctx.arc(0, 0, 56, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  } else if (isReef) {
     // Sunlit sand shoals & caustic shimmer spots on the ocean floor
     if (town.sandPatches) {
       for (const sp of town.sandPatches) {
@@ -419,9 +483,36 @@ function drawProp(ctx, p) {
   switch (p.shape) {
     case 'person': {
       const phase = p.wander ? p.wander.walkPhase : 0;
-      const moving = p.wander && (Math.abs(p.vx) > 2 || Math.abs(p.vy) > 2);
-      const bob = moving && !p.swallowing ? Math.abs(Math.sin(phase)) * 3.2 : 0;
-      const stride = moving && !p.swallowing ? Math.sin(phase) * 3.8 : 0;
+      const speed = Math.hypot(p.vx, p.vy);
+      const moving = p.wander && speed > 2;
+      const resting = Boolean(p.wander && p.wander.resting && !p.swallowing);
+      const sprinting = moving && speed > 95 && !p.swallowing;
+      const stamina = p.wander && typeof p.wander.stamina === 'number' ? p.wander.stamina : 1;
+      const pant = resting ? Math.sin(p.wander.restPhase || 0) * 1.1 : 0;
+      const bob = moving && !p.swallowing ? Math.abs(Math.sin(phase)) * (sprinting ? 4.4 : 3.2) : pant;
+      const stride = moving && !p.swallowing ? Math.sin(phase) * (sprinting ? 5.2 : 3.8) : 0;
+
+      // Trailing speed lines when running really fast (fades slightly as stamina drains)
+      if (sprinting) {
+        const backX = -p.vx / speed;
+        const backY = -p.vy / speed;
+        const perpX = -backY;
+        const perpY = backX;
+        const lineAlpha = 0.35 + stamina * 0.42;
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${lineAlpha.toFixed(2)})`;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        for (const [off, len] of [[-5, 16], [0, 22], [5, 14]]) {
+          const sx = backX * 8 + perpX * off;
+          const sy = backY * 8 + perpY * off - 3;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx + backX * len * (0.65 + stamina * 0.35), sy + backY * len * (0.65 + stamina * 0.35));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
 
       ctx.save();
       if (p.swallowing) ctx.rotate(p.angle);
@@ -436,11 +527,12 @@ function drawProp(ctx, p) {
       ctx.beginPath();
       ctx.roundRect(-6.5, -8 - bob, 13, 13, 5);
       ctx.fill();
-      // Arms swinging slightly
+      // Arms swinging slightly (or resting down when catching breath)
       ctx.fillStyle = '#ffd9ba';
       ctx.beginPath();
-      ctx.arc(-7.2, -1 - bob - stride * 0.4, 2.3, 0, Math.PI * 2);
-      ctx.arc(7.2, -1 - bob + stride * 0.4, 2.3, 0, Math.PI * 2);
+      const armY = resting ? 1.5 - bob : -1 - bob;
+      ctx.arc(-7.2, armY - stride * 0.4, 2.3, 0, Math.PI * 2);
+      ctx.arc(7.2, armY + stride * 0.4, 2.3, 0, Math.PI * 2);
       ctx.fill();
       // Head
       ctx.fillStyle = '#ffd9ba';
@@ -452,6 +544,23 @@ function drawProp(ctx, p) {
       ctx.beginPath();
       ctx.arc(0, -14 - bob, 5.4, Math.PI, Math.PI * 2);
       ctx.fill();
+      // Resting sweat drop + mini stamina recharge bar
+      if (resting) {
+        ctx.fillStyle = '#7dd3fc';
+        ctx.beginPath();
+        ctx.arc(7.5, -15 - pant * 0.8, 2.1, 0, Math.PI * 2);
+        ctx.fill();
+        const barW = 16;
+        const barH = 3.5;
+        ctx.fillStyle = 'rgba(20, 32, 38, 0.45)';
+        ctx.beginPath();
+        ctx.roundRect(-barW / 2, -23.5, barW, barH, 2);
+        ctx.fill();
+        ctx.fillStyle = '#5eead4';
+        ctx.beginPath();
+        ctx.roundRect(-barW / 2, -23.5, Math.max(2, barW * stamina), barH, 2);
+        ctx.fill();
+      }
       ctx.restore();
       break;
     }
@@ -3430,15 +3539,17 @@ export function renderGame(ctx, state, width, height, pointerGuide = null) {
 
   // Outer backdrop matching the active map
   ctx.fillStyle =
-    state.town.mapId === 'reef'
-      ? '#4fa6bd'
-      : state.town.mapId === 'playroom'
-        ? '#d4b083'
-        : state.town.mapId === 'mars'
-          ? '#bd6646'
-          : state.town.mapId === 'metro'
-            ? '#b8c1cc'
-            : '#b4d8a5';
+    state.town.mapId === 'stampede'
+      ? '#74ba68'
+      : state.town.mapId === 'reef'
+        ? '#4fa6bd'
+        : state.town.mapId === 'playroom'
+          ? '#d4b083'
+          : state.town.mapId === 'mars'
+            ? '#bd6646'
+            : state.town.mapId === 'metro'
+              ? '#b8c1cc'
+              : '#b4d8a5';
   ctx.fillRect(0, 0, width, height);
 
   const cam = state.camera;

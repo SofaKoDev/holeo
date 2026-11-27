@@ -136,6 +136,9 @@ describe('Holeo engine', () => {
     expect(pickPersonFallSound(0.35, false)).toBe('scream');
     expect(pickPersonFallSound(0.45, false)).toBe('none');
     expect(pickPersonFallSound(0.95, false)).toBe('none');
+    expect(pickPersonFallSound(0.10, false, true)).toBe('yelp');
+    expect(pickPersonFallSound(0.95, false, true)).toBe('scream');
+    expect(pickPersonFallSound(0.95, true, true)).toBe('wilhelm');
     expect(shouldPlayVehicleHonk(0.2)).toBe(true);
     expect(shouldPlayVehicleHonk(0.75)).toBe(false);
 
@@ -269,5 +272,83 @@ describe('Holeo engine', () => {
       expect(onLane).toBe(true);
     }
     expect(movedVehicles).toBeGreaterThan(vehicles.length * 0.7);
+  });
+
+  it('generates Turbo Crowd with only people sprinting really fast across the arena', () => {
+    const game = createGame({ mode: 'sandbox', mapId: 'stampede', seed: 42 });
+    const townGame = createGame({ mode: 'sandbox', mapId: 'town', seed: 42 });
+    startGame(game);
+    startGame(townGame);
+
+    expect(game.town.mapId).toBe('stampede');
+    expect(game.town.props.length).toBeGreaterThanOrEqual(200);
+    expect(game.town.props.every((p) => p.shape === 'person')).toBe(true);
+
+    const avgSprinterSpeed =
+      game.town.props.reduce((sum, p) => sum + p.wander.speed, 0) / game.town.props.length;
+    const townPeople = townGame.town.props.filter((p) => p.shape === 'person');
+    const avgTownSpeed =
+      townPeople.reduce((sum, p) => sum + p.wander.speed, 0) / townPeople.length;
+    expect(avgSprinterSpeed).toBeGreaterThan(avgTownSpeed * 4);
+
+    const startPositions = game.town.props.map((p) => ({ x: p.x, y: p.y }));
+    for (let i = 0; i < 40; i++) stepGame(game, 0.04, 0, 0);
+
+    const active = game.town.props.filter((p) => !p.swallowed && !p.swallowing);
+    const fastMovers = active.filter((p) => {
+      const orig = startPositions[p.id - 1];
+      return Math.hypot(p.x - orig.x, p.y - orig.y) > 80;
+    });
+    expect(fastMovers.length).toBeGreaterThan(active.length * 0.75);
+
+    const bound = game.town.halfSize;
+    for (const p of active) {
+      expect(Math.abs(p.x)).toBeLessThanOrEqual(bound);
+      expect(Math.abs(p.y)).toBeLessThanOrEqual(bound);
+    }
+  });
+
+  it('slows Turbo Crowd runners as stamina drains, rests them to recharge, then resumes full speed', () => {
+    const game = createGame({ mode: 'sandbox', mapId: 'stampede', seed: 42 });
+    startGame(game);
+
+    // Pick a runner far from the hole and place them in open space with known stamina
+    const runner = game.town.props.find((p) => Math.hypot(p.x, p.y) > 400);
+    runner.x = 0;
+    runner.y = -500;
+    runner.wander.dir = 0;
+    runner.wander.timer = 99;
+    runner.wander.stamina = 1;
+    runner.wander.resting = false;
+    runner.wander.staminaDrain = 0.5;
+    runner.wander.staminaRegen = 1.0;
+
+    // Step once at full stamina -> full speed
+    stepGame(game, 0.04, 0, 0);
+    const fullSpeed = Math.hypot(runner.vx, runner.vy);
+    expect(fullSpeed).toBeGreaterThan(runner.wander.speed * 0.95);
+
+    // Drain stamina partway -> speed should gently decrease while still running
+    for (let i = 0; i < 30; i++) stepGame(game, 0.04, 0, 0);
+    expect(runner.wander.resting).toBe(false);
+    expect(runner.wander.stamina).toBeLessThan(0.5);
+    const tiredSpeed = Math.hypot(runner.vx, runner.vy);
+    expect(tiredSpeed).toBeLessThan(fullSpeed * 0.9);
+    expect(tiredSpeed).toBeGreaterThan(runner.wander.speed * 0.6);
+
+    // Keep running until stamina depletes -> enters resting state and stops
+    for (let i = 0; i < 40 && !runner.wander.resting; i++) stepGame(game, 0.04, 0, 0);
+    expect(runner.wander.resting).toBe(true);
+    stepGame(game, 0.04, 0, 0);
+    expect(Math.hypot(runner.vx, runner.vy)).toBe(0);
+    expect(runner.wander.stamina).toBeGreaterThan(0);
+
+    // Let them finish resting -> stamina refills to 1 and they run at full speed again
+    for (let i = 0; i < 40 && runner.wander.resting; i++) stepGame(game, 0.04, 0, 0);
+    expect(runner.wander.resting).toBe(false);
+    expect(runner.wander.stamina).toBe(1);
+    stepGame(game, 0.04, 0, 0);
+    const resumedSpeed = Math.hypot(runner.vx, runner.vy);
+    expect(resumedSpeed).toBeGreaterThan(tiredSpeed * 1.1);
   });
 });

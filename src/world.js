@@ -2,6 +2,7 @@ import { PROPS } from './catalog.js';
 
 export const WORLD_HALF = 1400; // 2800 x 2800 Cozy Town
 export const METRO_HALF = 1650; // 3300 x 3300 Metro City
+export const STAMPEDE_HALF = 1150; // 2300 x 2300 Turbo Crowd Arena
 export const LANE_OFFSET = 26;
 export const BIKE_LANE_OFFSET = 43;
 
@@ -22,6 +23,7 @@ export function createTown(seed = 20261120, mapId = 'town') {
   if (mapId === 'mars') return createMarsColony(seed);
   if (mapId === 'playroom') return createPlayroom(seed);
   if (mapId === 'reef') return createCoralReef(seed);
+  if (mapId === 'stampede') return createTurboCrowd(seed);
   const rand = makeRng(seed);
   const props = [];
   let nextId = 1;
@@ -1330,4 +1332,107 @@ function createCoralReef(seed = 20261120) {
   }
 
   return { mapId: 'reef', halfSize, roads, sandPatches, props };
+}
+
+function createTurboCrowd(seed = 20261120) {
+  const rand = makeRng((seed ^ 0x61a2c8d5) >>> 0);
+  const halfSize = STAMPEDE_HALF;
+  const roads = [];
+  const props = [];
+  let nextId = 1;
+
+  const jerseyColors = [
+    '#ff4d6d', '#3a86ff', '#ffbe0b', '#2ec4b6',
+    '#8338ec', '#fb5607', '#06d6a0', '#ef476f', '#118ab2',
+  ];
+
+  const canPlace = (x, y, radius, pad = 6) => {
+    if (Math.abs(x) > halfSize - radius - 45 || Math.abs(y) > halfSize - radius - 45) return false;
+    if (Math.hypot(x, y) < radius + 38) return false;
+    for (const p of props) {
+      if (Math.hypot(x - p.x, y - p.y) < radius + p.radius + pad) return false;
+    }
+    return true;
+  };
+
+  const makeSprinterExtra = (initialDir = rand() * Math.PI * 2) => ({
+    color: jerseyColors[Math.floor(rand() * jerseyColors.length)],
+    accent: HAIR_COLORS[Math.floor(rand() * HAIR_COLORS.length)],
+    mass: 30,
+    points: 25,
+    wander: {
+      dir: initialDir,
+      speed: 170 + rand() * 95,
+      timer: 0.35 + rand() * 0.9,
+      pauseTimer: 0,
+      pauseChance: 0,
+      turnIntervalMin: 0.35,
+      turnIntervalSpan: 0.9,
+      scaredMultiplier: 1.22,
+      scaredRange: 120,
+      stamina: 0.35 + rand() * 0.65,
+      staminaDrain: 0.16 + rand() * 0.08,
+      staminaRegen: 0.45 + rand() * 0.15,
+      tiredFloor: 0.68,
+      resting: false,
+      restPhase: rand() * Math.PI * 2,
+      walkPhase: rand() * Math.PI * 2,
+    },
+  });
+
+  const addSprinter = (x, y, dir = rand() * Math.PI * 2) => {
+    const def = PROPS.person;
+    if (!canPlace(x, y, def.radius)) return false;
+    const extra = makeSprinterExtra(dir);
+    props.push({
+      id: nextId++,
+      type: 'person',
+      ...def,
+      ...extra,
+      x,
+      y,
+      angle: dir,
+      vx: 0,
+      vy: 0,
+      z: 0,
+      vz: 0,
+      tilt: 0,
+      tiltAngle: 0,
+      spinVel: 0,
+      swallowing: false,
+      swallowProgress: 0,
+      swallowed: false,
+      bump: 0,
+    });
+    return true;
+  };
+
+  // 1. Starter crowd right around the central start plaza so the chase begins immediately
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * Math.PI * 2 + rand() * 0.25;
+    const dist = 68 + rand() * 210;
+    addSprinter(Math.cos(a) * dist, Math.sin(a) * dist);
+  }
+
+  // 2. Pack of runners sprinting around the stadium oval track
+  for (let i = 0; i < 80; i++) {
+    const a = (i / 80) * Math.PI * 2 + (rand() - 0.5) * 0.08;
+    const laneJitter = (rand() - 0.5) * 95;
+    const rx = 740 + laneJitter;
+    const ry = 560 + laneJitter;
+    const tangent = a + (rand() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
+    addSprinter(Math.cos(a) * rx, Math.sin(a) * ry, tangent);
+  }
+
+  // 3. Huge chaotic crowd sprinting across the entire field
+  let placed = 0;
+  let attempts = 0;
+  while (placed < 200 && attempts < 2400) {
+    attempts++;
+    const x = (rand() * 2 - 1) * (halfSize - 80);
+    const y = (rand() * 2 - 1) * (halfSize - 80);
+    if (addSprinter(x, y)) placed++;
+  }
+
+  return { mapId: 'stampede', halfSize, roads, props };
 }

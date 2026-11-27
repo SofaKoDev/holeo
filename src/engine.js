@@ -188,7 +188,20 @@ function updateWanderer(prop, state, dt, buildingProps) {
   const dxHole = prop.x - hole.x;
   const dyHole = prop.y - hole.y;
   const distHole = Math.hypot(dxHole, dyHole);
-  const scared = prop.radius <= hole.radius * SWALLOW_RATIO && distHole < hole.radius + 95;
+  const scaredRange = w.scaredRange ?? 95;
+  const scared = prop.radius <= hole.radius * SWALLOW_RATIO && distHole < hole.radius + scaredRange;
+  const hasStamina = typeof w.stamina === 'number';
+
+  if (hasStamina && w.resting) {
+    w.stamina = Math.min(1, w.stamina + (w.staminaRegen ?? 0.5) * dt);
+    w.restPhase = (w.restPhase || 0) + dt * 7;
+    if (w.stamina >= 1) {
+      w.resting = false;
+    }
+    prop.vx = 0;
+    prop.vy = 0;
+    return;
+  }
 
   if (scared) {
     w.pauseTimer = 0;
@@ -201,22 +214,35 @@ function updateWanderer(prop, state, dt, buildingProps) {
   } else {
     w.timer -= dt;
     if (w.timer <= 0) {
-      if (state.rand() < 0.22) {
+      const pauseChance = w.pauseChance ?? 0.22;
+      if (pauseChance > 0 && state.rand() < pauseChance) {
         w.pauseTimer = 0.45 + state.rand() * 0.9;
       } else {
         w.dir += (state.rand() - 0.5) * 2.6;
       }
-      w.timer = 1.4 + state.rand() * 2.8;
+      w.timer = (w.turnIntervalMin ?? 1.4) + state.rand() * (w.turnIntervalSpan ?? 2.8);
     }
   }
 
-  const speed = scared ? w.speed * 1.4 : w.speed;
+  let staminaFactor = 1;
+  if (hasStamina) {
+    const floor = w.tiredFloor ?? 0.68;
+    staminaFactor = floor + (1 - floor) * w.stamina;
+    const drain = (w.staminaDrain ?? 0.2) * (scared ? 1.25 : 1);
+    w.stamina = Math.max(0, w.stamina - drain * dt);
+    if (w.stamina <= 0) {
+      w.resting = true;
+    }
+  }
+
+  const speed = (scared ? w.speed * (w.scaredMultiplier ?? 1.4) : w.speed) * staminaFactor;
   const nextX = prop.x + Math.cos(w.dir) * speed * dt;
   const nextY = prop.y + Math.sin(w.dir) * speed * dt;
 
   // Keep people inside town borders
   const limit = state.town.halfSize - 70;
-  let blocked = Math.abs(nextX) > limit || Math.abs(nextY) > limit;
+  const outOfBounds = Math.abs(nextX) > limit || Math.abs(nextY) > limit;
+  let blocked = outOfBounds;
 
   // Gently steer around large buildings so people don't walk through houses
   if (!blocked) {
@@ -230,7 +256,11 @@ function updateWanderer(prop, state, dt, buildingProps) {
   }
 
   if (blocked) {
-    w.dir += Math.PI * (0.65 + state.rand() * 0.7);
+    if (outOfBounds) {
+      w.dir = Math.atan2(-prop.y, -prop.x) + (state.rand() - 0.5) * 1.2;
+    } else {
+      w.dir += Math.PI * (0.65 + state.rand() * 0.7);
+    }
     prop.vx = 0;
     prop.vy = 0;
   } else {

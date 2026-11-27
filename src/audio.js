@@ -30,8 +30,9 @@ function getContext() {
   return ctx;
 }
 
-export function pickPersonFallSound(roll = Math.random(), isLastPerson = false) {
+export function pickPersonFallSound(roll = Math.random(), isLastPerson = false, alwaysScream = false) {
   if (isLastPerson) return 'wilhelm'; // real wilhelm.mp3 saved exclusively for the very last person!
+  if (alwaysScream) return roll < 0.65 ? 'yelp' : 'scream';
   if (roll < 0.28) return 'yelp';     // ~28% quick comical falling yelp
   if (roll < 0.42) return 'scream';   // ~14% longer dramatic synth falling scream
   return 'none';
@@ -65,15 +66,20 @@ export function playSwallow(tier = 1, enabled = true) {
   }
 }
 
-export function playPersonFall(enabled = true, { isLastPerson = false, roll = Math.random() } = {}) {
-  const kind = pickPersonFallSound(roll, isLastPerson);
+export function playPersonFall(
+  enabled = true,
+  { isLastPerson = false, roll = Math.random(), alwaysScream = false, delay = 0 } = {},
+) {
+  const kind = pickPersonFallSound(roll, isLastPerson, alwaysScream);
   if (!enabled || kind === 'none') return kind;
   try {
     const ac = getContext();
     if (!ac) return kind;
-    const now = ac.currentTime;
-    if (kind !== 'wilhelm' && now - lastPersonSfxAt < 0.35) return 'none';
-    lastPersonSfxAt = now + (kind === 'wilhelm' ? 1.2 : kind === 'scream' ? 0.5 : 0);
+    const now = ac.currentTime + Math.max(0, delay);
+    if (!alwaysScream && kind !== 'wilhelm' && now - lastPersonSfxAt < 0.35) return 'none';
+    if (!alwaysScream) {
+      lastPersonSfxAt = now + (kind === 'wilhelm' ? 1.2 : kind === 'scream' ? 0.5 : 0);
+    }
 
     if (kind === 'wilhelm') {
       if (wilhelmBuffer) {
@@ -87,9 +93,9 @@ export function playPersonFall(enabled = true, { isLastPerson = false, roll = Ma
         playWilhelmNodes(ac, now);
       }
     } else if (kind === 'scream') {
-      playWilhelmNodes(ac, now);
+      playWilhelmNodes(ac, now, alwaysScream ? 0.84 + Math.random() * 0.36 : 1, alwaysScream ? 0.1 : 0.15);
     } else {
-      playYelpNodes(ac, now);
+      playYelpNodes(ac, now, alwaysScream ? 0.085 : 0.115);
     }
   } catch {
     // Ignore audio errors
@@ -97,7 +103,7 @@ export function playPersonFall(enabled = true, { isLastPerson = false, roll = Ma
   return kind;
 }
 
-function playYelpNodes(ac, now) {
+function playYelpNodes(ac, now, peakGain = 0.115) {
   // Expressive falling "whoaa-aah!" yelp (~0.46s) clearly distinct from the short swallow pop
   const voiceScale = 0.88 + Math.random() * 0.36;
   const dur = 0.44 + Math.random() * 0.08;
@@ -125,8 +131,8 @@ function playYelpNodes(ac, now) {
   formant.Q.value = 3.4;
 
   gain.gain.setValueAtTime(0.001, now);
-  gain.gain.exponentialRampToValueAtTime(0.115, now + 0.03);
-  gain.gain.setValueAtTime(0.095, now + dur * 0.48);
+  gain.gain.exponentialRampToValueAtTime(peakGain, now + 0.03);
+  gain.gain.setValueAtTime(peakGain * 0.82, now + dur * 0.48);
   gain.gain.exponentialRampToValueAtTime(0.001, now + dur + 0.02);
 
   osc.connect(formant).connect(gain).connect(ac.destination);
@@ -136,7 +142,7 @@ function playYelpNodes(ac, now) {
   vib.stop(now + dur + 0.04);
 }
 
-function playWilhelmNodes(ac, now) {
+function playWilhelmNodes(ac, now, voiceScale = 1, peakGain = 0.15) {
   // Longer, unmistakable iconic "aaAAh-AAAaaagh!" contour (~1.05s) with dual vocal formants & vibrato
   const osc = ac.createOscillator();
   const vib = ac.createOscillator();
@@ -146,12 +152,12 @@ function playWilhelmNodes(ac, now) {
   const master = ac.createGain();
 
   osc.type = 'sawtooth';
-  osc.frequency.setValueAtTime(300, now);
-  osc.frequency.exponentialRampToValueAtTime(590, now + 0.11);
-  osc.frequency.exponentialRampToValueAtTime(470, now + 0.23);
-  osc.frequency.exponentialRampToValueAtTime(675, now + 0.41);
-  osc.frequency.exponentialRampToValueAtTime(545, now + 0.64);
-  osc.frequency.exponentialRampToValueAtTime(210, now + 1.04);
+  osc.frequency.setValueAtTime(300 * voiceScale, now);
+  osc.frequency.exponentialRampToValueAtTime(590 * voiceScale, now + 0.11);
+  osc.frequency.exponentialRampToValueAtTime(470 * voiceScale, now + 0.23);
+  osc.frequency.exponentialRampToValueAtTime(675 * voiceScale, now + 0.41);
+  osc.frequency.exponentialRampToValueAtTime(545 * voiceScale, now + 0.64);
+  osc.frequency.exponentialRampToValueAtTime(210 * voiceScale, now + 1.04);
 
   // Expressive vocal vibrato
   vib.type = 'sine';
@@ -163,18 +169,18 @@ function playWilhelmNodes(ac, now) {
 
   // Two parallel vocal formant filters ("AAH" vowel shape)
   f1.type = 'bandpass';
-  f1.frequency.setValueAtTime(840, now);
-  f1.frequency.exponentialRampToValueAtTime(600, now + 1.04);
+  f1.frequency.setValueAtTime(840 * voiceScale, now);
+  f1.frequency.exponentialRampToValueAtTime(600 * voiceScale, now + 1.04);
   f1.Q.value = 4.2;
 
   f2.type = 'bandpass';
-  f2.frequency.setValueAtTime(1980, now);
-  f2.frequency.exponentialRampToValueAtTime(1250, now + 1.04);
+  f2.frequency.setValueAtTime(1980 * voiceScale, now);
+  f2.frequency.exponentialRampToValueAtTime(1250 * voiceScale, now + 1.04);
   f2.Q.value = 5.0;
 
   master.gain.setValueAtTime(0.001, now);
-  master.gain.exponentialRampToValueAtTime(0.15, now + 0.06);
-  master.gain.setValueAtTime(0.135, now + 0.48);
+  master.gain.exponentialRampToValueAtTime(peakGain, now + 0.06);
+  master.gain.setValueAtTime(peakGain * 0.9, now + 0.48);
   master.gain.exponentialRampToValueAtTime(0.001, now + 1.06);
 
   osc.connect(f1).connect(master);
