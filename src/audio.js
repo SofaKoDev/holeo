@@ -351,6 +351,46 @@ export function playToySqueak(enabled = true) {
   }
 }
 
+export function playBubbleHonk(shape = 'shellCar', enabled = true, roll = Math.random()) {
+  if (!enabled || !shouldPlayVehicleHonk(roll)) return false;
+  try {
+    const ac = getContext();
+    if (!ac) return false;
+    const now = ac.currentTime;
+    if (now - lastHonkAt < 0.24) return false;
+    lastHonkAt = now;
+
+    // Playful underwater conch-shell horn / bubbly bloop!
+    const isHeavy = shape === 'shellTruck' || shape === 'shellBus';
+    const isScooter = shape === 'shellScooter';
+    const base = isScooter ? 640 : isHeavy ? 210 : 390;
+    const dur = isScooter ? 0.16 : isHeavy ? 0.3 : 0.23;
+
+    const osc = ac.createOscillator();
+    const filter = ac.createBiquadFilter();
+    const gain = ac.createGain();
+
+    osc.type = isHeavy ? 'triangle' : 'sine';
+    osc.frequency.setValueAtTime(base * 0.85, now);
+    osc.frequency.exponentialRampToValueAtTime(base * 1.32, now + dur * 0.42);
+    osc.frequency.exponentialRampToValueAtTime(base * 0.72, now + dur);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(isHeavy ? 820 : 1450, now);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.1, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    osc.connect(filter).connect(gain).connect(ac.destination);
+    osc.start(now);
+    osc.stop(now + dur + 0.02);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function playLevelUp(enabled = true) {
   if (!enabled) return;
   try {

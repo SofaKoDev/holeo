@@ -236,4 +236,38 @@ describe('Holeo engine', () => {
     }
     expect(movedVehicles).toBeGreaterThan(vehicles.length * 0.7);
   });
+
+  it('generates Coral Reef with swimming mermen, shell cars, and coral buildings', () => {
+    const game = createGame({ mode: 'sandbox', mapId: 'reef', seed: 42 });
+    startGame(game);
+    expect(game.town.mapId).toBe('reef');
+    expect(game.town.props.some((p) => p.shape === 'atlantisPalace')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'coralCitadel')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'coralTower')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'reefDome')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'coralCottage')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'shellVilla')).toBe(true);
+    expect(game.town.props.some((p) => p.shape === 'shellCar')).toBe(true);
+
+    const mermen = game.town.props.filter((p) => p.shape === 'merman');
+    const vehicles = game.town.props.filter((p) => p.motion === 'road');
+    expect(mermen.length).toBeGreaterThan(20);
+    expect(vehicles.length).toBeGreaterThan(15);
+
+    const mermanStart = mermen.map((m) => ({ x: m.x, y: m.y }));
+    const vehicleStart = vehicles.map((v) => ({ x: v.x, y: v.y }));
+    for (let i = 0; i < 80; i++) stepGame(game, 0.04, 0, 0);
+
+    const movedMermen = mermen.filter((m, i) => Math.hypot(m.x - mermanStart[i].x, m.y - mermanStart[i].y) > 4);
+    expect(movedMermen.length).toBeGreaterThan(mermen.length * 0.6);
+
+    let movedVehicles = 0;
+    for (let i = 0; i < vehicles.length; i++) {
+      const v = vehicles[i];
+      if (Math.hypot(v.x - vehicleStart[i].x, v.y - vehicleStart[i].y) > 5) movedVehicles++;
+      const onLane = game.town.roads.some((r) => Math.abs(v.x - r) <= 56 || Math.abs(v.y - r) <= 56);
+      expect(onLane).toBe(true);
+    }
+    expect(movedVehicles).toBeGreaterThan(vehicles.length * 0.7);
+  });
 });

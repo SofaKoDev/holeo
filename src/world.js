@@ -21,6 +21,7 @@ export function createTown(seed = 20261120, mapId = 'town') {
   if (mapId === 'metro') return createMetroCity(seed);
   if (mapId === 'mars') return createMarsColony(seed);
   if (mapId === 'playroom') return createPlayroom(seed);
+  if (mapId === 'reef') return createCoralReef(seed);
   const rand = makeRng(seed);
   const props = [];
   let nextId = 1;
@@ -1019,4 +1020,314 @@ function createPlayroom(seed = 20261120) {
   }
 
   return { mapId: 'playroom', halfSize, roads, playTiles, props };
+}
+
+function createCoralReef(seed = 20261120) {
+  const rand = makeRng((seed ^ 0x6a2d8f53) >>> 0);
+  const halfSize = WORLD_HALF;
+  const roads = [-760, -240, 240, 760];
+  const props = [];
+  let nextId = 1;
+
+  // Deterministic sunlit sand shoals & caustic shimmer spots on the seabed
+  const sandPatches = [];
+  for (let i = 0; i < 44; i++) {
+    const sx = (rand() * 2 - 1) * (halfSize - 120);
+    const sy = (rand() * 2 - 1) * (halfSize - 120);
+    if (Math.hypot(sx, sy) < 230) continue;
+    if (roads.some((r) => Math.abs(sx - r) < 88 || Math.abs(sy - r) < 88)) continue;
+    sandPatches.push({
+      x: sx,
+      y: sy,
+      rx: 28 + rand() * 52,
+      ry: 20 + rand() * 36,
+      rot: rand() * Math.PI,
+    });
+  }
+
+  const canPlace = (x, y, radius, pad = 10) => {
+    if (Math.abs(x) > halfSize - radius - 40 || Math.abs(y) > halfSize - radius - 40) return false;
+    if (Math.hypot(x, y) < radius + 34) return false;
+    for (const p of props) {
+      if (Math.hypot(x - p.x, y - p.y) < radius + p.radius + pad) return false;
+    }
+    return true;
+  };
+
+  const add = (type, x, y, angle = 0, extra = {}) => {
+    const def = PROPS[type];
+    if (!canPlace(x, y, def.radius)) return false;
+    props.push({
+      id: nextId++,
+      type,
+      ...def,
+      ...extra,
+      x,
+      y,
+      angle,
+      vx: 0,
+      vy: 0,
+      z: 0,
+      vz: 0,
+      tilt: 0,
+      tiltAngle: 0,
+      spinVel: 0,
+      swallowing: false,
+      swallowProgress: 0,
+      swallowed: false,
+      bump: 0,
+    });
+    return true;
+  };
+
+  const mermanTails = ['#2ec4a6', '#3ca6e8', '#ff7b89', '#7d74e8', '#46d18a', '#f2a649'];
+  const mermanHair = ['#f5c249', '#3b2e2a', '#d95b43', '#e8f4f8', '#6b4226'];
+  const starfishColors = [
+    ['#ff7b6b', '#ffd166'],
+    ['#ff6ba8', '#ffe3a3'],
+    ['#f5a442', '#fff0b8'],
+    ['#b87cff', '#ffe184'],
+  ];
+  const shellColors = [
+    ['#f7c6d4', '#fff4e6'],
+    ['#b8f0e8', '#f0fffe'],
+    ['#ffe0a8', '#fff8e8'],
+    ['#d8c4f7', '#f7f0ff'],
+  ];
+  const coralColors = [
+    ['#ff7b89', '#ffb8c4'],
+    ['#ff8f5c', '#ffd199'],
+    ['#c97be8', '#f2b8ff'],
+    ['#4fd4c6', '#a8fff5'],
+  ];
+  const cottagePalettes = [
+    ['#ff968a', '#56d6c8'],
+    ['#f7a8b8', '#78e0d4'],
+    ['#ffa87a', '#63c7e8'],
+    ['#c99bf2', '#7ef2d4'],
+  ];
+  const villaPalettes = [
+    ['#f7c9a8', '#e8749c'],
+    ['#f7d9b8', '#4fd4c6'],
+    ['#e8c4f2', '#ff8a7a'],
+    ['#bfe8f0', '#f58ca8'],
+  ];
+
+  const makeMermanExtra = () => ({
+    color: mermanTails[Math.floor(rand() * mermanTails.length)],
+    accent: mermanHair[Math.floor(rand() * mermanHair.length)],
+    wander: {
+      dir: rand() * Math.PI * 2,
+      speed: 28 + rand() * 18,
+      timer: 1.0 + rand() * 2.4,
+      pauseTimer: rand() < 0.16 ? 0.35 + rand() * 0.7 : 0,
+      walkPhase: rand() * Math.PI * 2,
+    },
+  });
+
+  const makeReefExtra = (type) => {
+    if (type === 'merman') return makeMermanExtra();
+    if (type === 'starfish') {
+      const [c, a] = starfishColors[Math.floor(rand() * starfishColors.length)];
+      return { color: c, accent: a };
+    }
+    if (type === 'seaShell') {
+      const [c, a] = shellColors[Math.floor(rand() * shellColors.length)];
+      return { color: c, accent: a };
+    }
+    if (type === 'coralBush' || type === 'staghornCoral' || type === 'seaAnemone') {
+      const [c, a] = coralColors[Math.floor(rand() * coralColors.length)];
+      return { color: c, accent: a };
+    }
+    return {};
+  };
+
+  // 1. Central Pearl Lagoon starter ring around (0, 0)
+  const starterTiny = ['starfish', 'seaShell', 'pearlClam'];
+  for (let i = 0; i < 34; i++) {
+    const a = (i / 34) * Math.PI * 2 + rand() * 0.25;
+    const dist = 58 + rand() * 185;
+    const pick = starterTiny[i % starterTiny.length];
+    add(pick, Math.cos(a) * dist, Math.sin(a) * dist, rand() * Math.PI * 2, makeReefExtra(pick));
+  }
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2 + rand() * 0.4;
+    const dist = 68 + rand() * 140;
+    add('merman', Math.cos(a) * dist, Math.sin(a) * dist, rand() * Math.PI * 2, makeMermanExtra());
+  }
+  const starterSmall = ['seaAnemone', 'kelpLamp', 'treasureChest'];
+  for (let i = 0; i < 22; i++) {
+    const a = (i / 22) * Math.PI * 2 + rand() * 0.3;
+    const dist = 122 + rand() * 82;
+    const pick = starterSmall[i % starterSmall.length];
+    add(pick, Math.cos(a) * dist, Math.sin(a) * dist, rand() * Math.PI * 2, makeReefExtra(pick));
+  }
+
+  // 2. Colossal Coral Landmarks (Tier 7) — placed before vehicles so landmarks always spawn
+  add('atlantisPalace', 0, -1080, 0);
+  add('coralCitadel', -1060, -1060, 0);
+  add('coralCitadel', 1060, -1060, 0);
+  add('atlantisPalace', -1060, 1060, 0);
+  add('atlantisPalace', 1060, 1060, 0);
+
+  // 3. Shell cars, conch haulers & giant clam buses cruising the ocean-current highways
+  const pickShellVehicle = () => {
+    const r = rand();
+    if (r < 0.27) return 'shellCarPink';
+    if (r < 0.52) return 'shellCarTeal';
+    if (r < 0.74) return 'shellCarGold';
+    if (r < 0.88) return 'shellTruck';
+    return 'shellBus';
+  };
+  for (const roadY of roads) {
+    for (let x = -1200; x <= 1200; x += 180) {
+      if (roads.some((rx) => Math.abs(x - rx) < 110)) continue;
+      const lane = rand() < 0.5 ? -LANE_OFFSET : LANE_OFFSET;
+      const dir = lane > 0 ? 1 : -1;
+      const pick = pickShellVehicle();
+      const isBig = pick === 'shellTruck' || pick === 'shellBus';
+      const angle = dir > 0 ? 0 : Math.PI;
+      const speed = isBig ? 46 + rand() * 20 : 66 + rand() * 32;
+      add(pick, x + (rand() - 0.5) * 30, roadY + lane, angle, {
+        road: {
+          axis: 'x',
+          roadCoord: roadY,
+          laneOffset: lane,
+          laneWidth: LANE_OFFSET,
+          dir,
+          speed,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+  for (const roadX of roads) {
+    for (let y = -1200; y <= 1200; y += 190) {
+      if (roads.some((ry) => Math.abs(y - ry) < 110)) continue;
+      const lane = rand() < 0.5 ? -LANE_OFFSET : LANE_OFFSET;
+      const dir = lane > 0 ? 1 : -1;
+      const pick = pickShellVehicle();
+      const isBig = pick === 'shellTruck' || pick === 'shellBus';
+      const angle = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      const speed = isBig ? 46 + rand() * 20 : 66 + rand() * 32;
+      add(pick, roadX + lane, y + (rand() - 0.5) * 30, angle, {
+        road: {
+          axis: 'y',
+          roadCoord: roadX,
+          laneOffset: lane,
+          laneWidth: LANE_OFFSET,
+          dir,
+          speed,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+
+  // 4. Mermen zipping along outer sea-current lanes on shell scooters
+  for (const roadY of roads) {
+    for (let x = -1150; x <= 1150; x += 460) {
+      if (roads.some((rx) => Math.abs(x - rx) < 105)) continue;
+      const dir = rand() < 0.5 ? 1 : -1;
+      const lane = dir > 0 ? BIKE_LANE_OFFSET : -BIKE_LANE_OFFSET;
+      const angle = dir > 0 ? 0 : Math.PI;
+      add('shellScooter', x + (rand() - 0.5) * 70, roadY + lane, angle, {
+        color: mermanTails[Math.floor(rand() * mermanTails.length)],
+        accent: '#9ef7ff',
+        road: {
+          axis: 'x',
+          roadCoord: roadY,
+          laneOffset: lane,
+          laneWidth: BIKE_LANE_OFFSET,
+          dir,
+          speed: 58 + rand() * 24,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+  for (const roadX of roads) {
+    for (let y = -1150; y <= 1150; y += 460) {
+      if (roads.some((ry) => Math.abs(y - ry) < 105)) continue;
+      const dir = rand() < 0.5 ? 1 : -1;
+      const lane = dir > 0 ? BIKE_LANE_OFFSET : -BIKE_LANE_OFFSET;
+      const angle = dir > 0 ? Math.PI / 2 : -Math.PI / 2;
+      add('shellScooter', roadX + lane, y + (rand() - 0.5) * 70, angle, {
+        color: mermanTails[Math.floor(rand() * mermanTails.length)],
+        accent: '#9ef7ff',
+        road: {
+          axis: 'y',
+          roadCoord: roadX,
+          laneOffset: lane,
+          laneWidth: BIKE_LANE_OFFSET,
+          dir,
+          speed: 58 + rand() * 24,
+          targetAngle: angle,
+          lastIntersection: null,
+        },
+      });
+    }
+  }
+
+  // 5. Giant Coral Spires & Reef Pavilions (Tier 6)
+  const giantSpots = [
+    [-500, -1060], [500, -1060],
+    [-1060, -500], [1060, -500],
+    [-1060, 0], [1060, 0],
+    [-1060, 500], [1060, 500],
+    [-500, 1060], [500, 1060], [0, 1060],
+  ];
+  giantSpots.forEach(([gx, gy], idx) => {
+    add(idx % 2 === 0 ? 'coralTower' : 'reefDome', gx + (rand() - 0.5) * 40, gy + (rand() - 0.5) * 40, 0);
+  });
+
+  // 6. Coral Cottages & Shell Villas (Tier 5) in mid-ring reef blocks
+  const midBlocks = [
+    [-500, -500], [0, -500], [500, -500],
+    [-500, 0], [500, 0],
+    [-500, 500], [0, 500], [500, 500],
+  ];
+  for (const [bx, by] of midBlocks) {
+    for (const [ox, oy] of [[-85, -80], [85, -80], [-85, 85], [85, 85]]) {
+      const isCottage = rand() < 0.56;
+      const pick = isCottage ? 'coralCottage' : 'shellVilla';
+      const pal = isCottage
+        ? cottagePalettes[Math.floor(rand() * cottagePalettes.length)]
+        : villaPalettes[Math.floor(rand() * villaPalettes.length)];
+      add(pick, bx + ox + (rand() - 0.5) * 24, by + oy + (rand() - 0.5) * 24, 0, {
+        color: pal[0],
+        accent: pal[1],
+      });
+    }
+  }
+
+  // 7. Scatter giant kelp, staghorn coral, brain coral, anemones, kelp lamps, chests, shells & swimming mermen
+  const scatter = [
+    ['kelpTree', 26],
+    ['staghornCoral', 24],
+    ['coralBush', 42],
+    ['seaAnemone', 28],
+    ['kelpLamp', 28],
+    ['treasureChest', 20],
+    ['starfish', 34],
+    ['seaShell', 32],
+    ['pearlClam', 26],
+    ['merman', 38],
+  ];
+  for (const [type, count] of scatter) {
+    let placed = 0;
+    let attempts = 0;
+    while (placed < count && attempts < count * 12) {
+      attempts++;
+      const x = (rand() * 2 - 1) * (halfSize - 90);
+      const y = (rand() * 2 - 1) * (halfSize - 90);
+      if (roads.some((r) => Math.abs(x - r) < 66 || Math.abs(y - r) < 66)) continue;
+      if (add(type, x, y, rand() * Math.PI * 2, makeReefExtra(type))) placed++;
+    }
+  }
+
+  return { mapId: 'reef', halfSize, roads, sandPatches, props };
 }

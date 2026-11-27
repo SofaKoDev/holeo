@@ -3,6 +3,7 @@ export const MAPS = [
   { id: 'metro', name: 'Metro City', subtitle: 'Yellow cabs, cyclists & mega-towers', badge: '🏙️' },
   { id: 'mars', name: 'Mars Colony', subtitle: 'Aliens, hover-cars & biodomes', badge: '🪐' },
   { id: 'playroom', name: 'Playroom', subtitle: 'Toy blocks, plushies & play rug', badge: '🧸' },
+  { id: 'reef', name: 'Coral Reef', subtitle: 'Mermen, fish cars & coral towers', badge: '🐚' },
 ];
 
 export const TIERS = [
@@ -35,6 +36,10 @@ export const PROPS = {
   crayon: { name: 'Crayon', tier: 1, radius: 11, height: 15, mass: 13, points: 12, shape: 'crayon', color: '#4da3e8', accent: '#2c6ea3' },
   rubberDuck: { name: 'Rubber Duck', tier: 1, radius: 12, height: 16, mass: 15, points: 15, shape: 'rubberDuck', color: '#ffd447', accent: '#ff8c38' },
   windupToy: { name: 'Wind-Up Toy', tier: 1, radius: 12, height: 22, mass: 17, points: 20, shape: 'windupToy', color: '#ff708d', accent: '#ffd152', motion: 'wander' },
+  starfish: { name: 'Starfish', tier: 1, radius: 11, height: 10, mass: 13, points: 10, shape: 'starfish', color: '#ff7b6b', accent: '#ffd166' },
+  seaShell: { name: 'Sea Shell', tier: 1, radius: 11, height: 14, mass: 13, points: 12, shape: 'seaShell', color: '#f7c6d4', accent: '#fff4e6' },
+  pearlClam: { name: 'Pearl Clam', tier: 1, radius: 12, height: 15, mass: 16, points: 16, shape: 'pearlClam', color: '#9c7be6', accent: '#fff8eb' },
+  merman: { name: 'Merman', tier: 1, radius: 12, height: 22, mass: 17, points: 20, shape: 'merman', color: '#38c7a3', accent: '#f5c249', motion: 'wander' },
 
   // Tier 2: Small (radius 18-26)
   trashcan: { name: 'Trash Can', tier: 2, radius: 19, height: 22, mass: 34, points: 25, shape: 'cylinder', color: '#589e8c', accent: '#3d7567' },
@@ -51,6 +56,10 @@ export const PROPS = {
   ringStack: { name: 'Stacking Rings', tier: 2, radius: 20, height: 34, mass: 38, points: 32, shape: 'ringStack', color: '#f26b6b', accent: '#58b8e8' },
   plushBunny: { name: 'Plush Bunny', tier: 2, radius: 22, height: 28, mass: 44, points: 38, shape: 'plushBunny', color: '#f7dce4', accent: '#f29eb6' },
   toyScooter: { name: 'Ride-On Scooter', tier: 2, radius: 18, height: 22, mass: 38, points: 42, shape: 'toyScooter', color: '#ff6b6b', accent: '#ffd447', motion: 'road' },
+  seaAnemone: { name: 'Sea Anemone', tier: 2, radius: 19, height: 22, mass: 36, points: 28, shape: 'seaAnemone', color: '#f26da8', accent: '#ffd66b' },
+  kelpLamp: { name: 'Kelp Lantern', tier: 2, radius: 19, height: 42, mass: 38, points: 32, shape: 'kelpLamp', color: '#3b9c7a', accent: '#9ef7ff' },
+  treasureChest: { name: 'Sunken Chest', tier: 2, radius: 22, height: 24, mass: 44, points: 38, shape: 'treasureChest', color: '#9e6238', accent: '#ffd447' },
+  shellScooter: { name: 'Minnow Scooter', tier: 2, radius: 18, height: 22, mass: 38, points: 42, shape: 'shellScooter', color: '#ff82a9', accent: '#7ef5e8', motion: 'road' },
 
   // Tier 3: Medium (radius 30-42)
   bush: { name: 'Round Bush', tier: 3, radius: 30, height: 22, mass: 85, points: 50, shape: 'bush', color: '#5cb370', accent: '#80d48f' },
@@ -65,6 +74,10 @@ export const PROPS = {
   toyCarRed: { name: 'Toy Racer', tier: 3, radius: 36, height: 24, mass: 148, points: 82, shape: 'toyCar', color: '#ef5b5b', accent: '#ffe169', motion: 'road' },
   toyCarBlue: { name: 'Wooden Car', tier: 3, radius: 36, height: 24, mass: 148, points: 82, shape: 'toyCar', color: '#4da3e8', accent: '#fff4d4', motion: 'road' },
   toyCarYellow: { name: 'Toy Buggy', tier: 3, radius: 36, height: 24, mass: 150, points: 86, shape: 'toyCar', color: '#f7c548', accent: '#ff708d', motion: 'road' },
+  coralBush: { name: 'Brain Coral', tier: 3, radius: 30, height: 26, mass: 88, points: 55, shape: 'coralBush', color: '#ff7b89', accent: '#ffb3c1' },
+  shellCarPink: { name: 'Coral Fish Car', tier: 3, radius: 36, height: 24, mass: 148, points: 84, shape: 'shellCar', color: '#ff708d', accent: '#fff2cc', motion: 'road' },
+  shellCarTeal: { name: 'Reef Fish Cruiser', tier: 3, radius: 36, height: 24, mass: 148, points: 84, shape: 'shellCar', color: '#38c7b8', accent: '#ffe799', motion: 'road' },
+  shellCarGold: { name: 'Goldfish Cab', tier: 3, radius: 37, height: 24, mass: 152, points: 88, shape: 'shellCar', color: '#ffae38', accent: '#fff5d6', motion: 'road' },
 
   // Tier 4: Large (radius 48-64)
   pine: { name: 'Pine Tree', tier: 4, radius: 48, height: 64, mass: 260, points: 120, shape: 'pine', color: '#3f8c6e', accent: '#5db38e' },
@@ -78,6 +91,10 @@ export const PROPS = {
   plushElephant: { name: 'Plush Elephant', tier: 4, radius: 50, height: 50, mass: 280, points: 135, shape: 'plushElephant', color: '#8ab4d8', accent: '#f5b8c8' },
   toyTruck: { name: 'Toy Dump Truck', tier: 4, radius: 54, height: 36, mass: 345, points: 165, shape: 'toyTruck', color: '#f7c548', accent: '#ef5b5b', motion: 'road' },
   toyTrain: { name: 'Wooden Train', tier: 4, radius: 58, height: 38, mass: 410, points: 195, shape: 'toyTrain', color: '#4c94d8', accent: '#ef5b5b', motion: 'road' },
+  kelpTree: { name: 'Giant Kelp', tier: 4, radius: 48, height: 66, mass: 275, points: 130, shape: 'kelpTree', color: '#2ea37e', accent: '#75e6b8' },
+  staghornCoral: { name: 'Staghorn Coral', tier: 4, radius: 50, height: 58, mass: 285, points: 138, shape: 'staghornCoral', color: '#ff7a6b', accent: '#ffd178' },
+  shellTruck: { name: 'Whale Hauler', tier: 4, radius: 54, height: 36, mass: 345, points: 165, shape: 'shellTruck', color: '#58a4e0', accent: '#ffd447', motion: 'road' },
+  shellBus: { name: 'Giant Fish Bus', tier: 4, radius: 58, height: 36, mass: 410, points: 195, shape: 'shellBus', color: '#ff8a5c', accent: '#b8fcff', motion: 'road' },
 
   // Tier 5: Huge (radius 74-96)
   cottage: { name: 'Cozy Cottage', tier: 5, radius: 76, height: 62, mass: 760, points: 320, shape: 'house', color: '#fff4df', accent: '#e06c65' },
@@ -87,6 +104,8 @@ export const PROPS = {
   habDome: { name: 'Mars Biodome', tier: 5, radius: 86, height: 72, mass: 980, points: 410, shape: 'habDome', color: '#eef3f7', accent: '#69db9e' },
   blockHouse: { name: 'Block Cottage', tier: 5, radius: 82, height: 74, mass: 920, points: 390, shape: 'blockHouse', color: '#f5d99e', accent: '#ef5b5b' },
   blockArch: { name: 'Block Archway', tier: 5, radius: 86, height: 78, mass: 990, points: 420, shape: 'blockArch', color: '#a8dcff', accent: '#ffd447' },
+  coralCottage: { name: 'Coral Cottage', tier: 5, radius: 82, height: 74, mass: 940, points: 400, shape: 'coralCottage', color: '#ff968a', accent: '#56d6c8' },
+  shellVilla: { name: 'Shell Villa', tier: 5, radius: 86, height: 78, mass: 1000, points: 425, shape: 'shellVilla', color: '#f7c9a8', accent: '#e8749c' },
 
   // Tier 6: Giant (radius 112-136)
   apartments: { name: 'Apartments', tier: 6, radius: 118, height: 115, mass: 2100, points: 750, shape: 'tower', color: '#f2d0b6', accent: '#d98a6c' },
@@ -96,6 +115,8 @@ export const PROPS = {
   colonyTower: { name: 'Colony Spire', tier: 6, radius: 130, height: 165, mass: 2650, points: 920, shape: 'colonyTower', color: '#edf2f7', accent: '#4fd1e8' },
   blockTower: { name: 'ABC Block Tower', tier: 6, radius: 122, height: 155, mass: 2350, points: 860, shape: 'blockTower', color: '#f7d89c', accent: '#56b385' },
   toyChest: { name: 'Toy Chest', tier: 6, radius: 128, height: 118, mass: 2550, points: 900, shape: 'toyChest', color: '#d98a54', accent: '#ffd447' },
+  coralTower: { name: 'Coral Spire', tier: 6, radius: 124, height: 158, mass: 2400, points: 870, shape: 'coralTower', color: '#f28279', accent: '#7ff0e6' },
+  reefDome: { name: 'Reef Pavilion', tier: 6, radius: 128, height: 132, mass: 2550, points: 900, shape: 'reefDome', color: '#b58ef0', accent: '#9ef7ff' },
 
   // Tier 7: Colossal (radius 158-185)
   skyscraper: { name: 'Skyscraper', tier: 7, radius: 162, height: 195, mass: 4600, points: 1600, shape: 'skyscraper', color: '#9ec4de', accent: '#49799e' },
@@ -107,6 +128,8 @@ export const PROPS = {
   mothership: { name: 'UFO Mothership', tier: 7, radius: 184, height: 190, mass: 6600, points: 2700, shape: 'mothership', color: '#9ab0c7', accent: '#6cf2ff' },
   playTent: { name: 'Playhouse Teepee', tier: 7, radius: 162, height: 225, mass: 4950, points: 1750, shape: 'playTent', color: '#fff4df', accent: '#ef6b6b' },
   blockCastle: { name: 'Grand Block Castle', tier: 7, radius: 184, height: 245, mass: 6600, points: 2700, shape: 'blockCastle', color: '#f7ddb0', accent: '#4da3e8' },
+  coralCitadel: { name: 'Coral Citadel', tier: 7, radius: 162, height: 245, mass: 4950, points: 1780, shape: 'coralCitadel', color: '#ff8a7a', accent: '#72f0e6' },
+  atlantisPalace: { name: 'Atlantis Coral Palace', tier: 7, radius: 184, height: 265, mass: 6650, points: 2750, shape: 'atlantisPalace', color: '#f7d8c4', accent: '#4fd6cc' },
 };
 
 export function tierForRadius(radius) {
