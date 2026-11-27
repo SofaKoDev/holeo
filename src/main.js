@@ -2,7 +2,7 @@ import './styles.css';
 import { MAPS, TIERS, tierForRadius, tierProgressForRadius } from './catalog.js';
 import { createGame, startGame, togglePause, stepGame } from './engine.js';
 import { renderGame } from './render.js';
-import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk, playBikeBell, playSciFiHonk, playToySqueak } from './audio.js';
+import { playSwallow, playLevelUp, playPersonFall, playVehicleHonk, playBikeBell, playSciFiHonk, playToySqueak, playBubbleHonk } from './audio.js';
 
 const BEST_KEY_PREFIX = 'holeo-arcade-best-v1';
 const SOUND_KEY = 'holeo-sound-v1';
@@ -289,7 +289,15 @@ function syncUi() {
   } else {
     const pct = Math.min(100, Math.round((state.swallowedCount / state.totalProps) * 100));
     ui.hudMidLabel.textContent =
-      state.mapId === 'metro' ? 'CITY' : state.mapId === 'mars' ? 'MARS' : state.mapId === 'playroom' ? 'ROOM' : 'TOWN';
+      state.mapId === 'metro'
+        ? 'CITY'
+        : state.mapId === 'mars'
+          ? 'MARS'
+          : state.mapId === 'playroom'
+            ? 'ROOM'
+            : state.mapId === 'reef'
+              ? 'REEF'
+              : 'TOWN';
     ui.hudMidVal.textContent = `${pct}%`;
   }
 
@@ -341,7 +349,7 @@ function loop(now) {
 
     const [ix, iy] = getInputVector();
     const { captured, swallowed, leveledUp } = stepGame(state, dt, ix, iy);
-    const isLivingWalker = (p) => p.shape === 'person' || p.shape === 'alien' || p.shape === 'windupToy';
+    const isLivingWalker = (p) => p.shape === 'person' || p.shape === 'alien' || p.shape === 'windupToy' || p.shape === 'merman';
     const capturedPeople = captured.filter(isLivingWalker);
     const anyStandingPersonLeft = capturedPeople.length > 0 && state.town.props.some(
       (p) => isLivingWalker(p) && !p.swallowing && !p.swallowed,
@@ -378,6 +386,13 @@ function loop(now) {
         prop.shape === 'hoverScooter'
       ) {
         playSciFiHonk(prop.shape, soundEnabled);
+      } else if (
+        prop.shape === 'shellCar' ||
+        prop.shape === 'shellTruck' ||
+        prop.shape === 'shellBus' ||
+        prop.shape === 'shellScooter'
+      ) {
+        playBubbleHonk(prop.shape, soundEnabled);
       }
     }
     if (swallowed.length) playSwallow(swallowed[swallowed.length - 1].tier, soundEnabled);
